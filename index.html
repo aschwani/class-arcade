@@ -29,6 +29,10 @@
   .btn-gold{background:#8a6d1c; border-color:var(--gold); color:#fff;}
   .btn-danger:hover{border-color:#f87171; color:#f87171;}
   .badge{background:var(--gold); color:#111; border-radius:10px; padding:0 7px; font-size:12px; font-weight:bold; margin-left:5px;}
+  .sync-status{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); white-space:nowrap;}
+  .sync-dot{width:10px; height:10px; border-radius:50%; background:#64748b; display:inline-block; flex-shrink:0;}
+  .sync-dot.on{background:var(--green); box-shadow:0 0 6px var(--green);}
+  .sync-dot.off{background:#f59e0b;}
   .filters{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
   input[type="text"], input[type="search"], select, textarea, input[type="color"]{
     background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:14px; font-family:inherit;}
@@ -104,6 +108,7 @@
       <button id="nav-submit" onclick="showView('submit')">Submit Your Game</button>
       <button id="nav-review" onclick="showView('review')">Teacher Review<span id="review-badge"></span></button>
     </nav>
+    <span class="sync-status" title="Live sync status"><span id="sync-dot" class="sync-dot off"></span><span id="sync-label">Connecting…</span></span>
     <div class="filters" id="library-filters">
       <input type="search" id="f-search" placeholder="Search games…" oninput="renderLibrary()">
       <select id="f-period" onchange="renderLibrary()">
@@ -172,11 +177,12 @@
   <section id="view-review" class="view">
     <h2 style="margin-bottom:6px;">Teacher Review</h2>
     <p class="muted" style="margin-bottom:16px;">Games submitted on this computer wait here. Approve a game to add it to the library, or reject it. (On the class site, submissions arrive as downloaded files — this queue is the on-this-computer demo of that step.)</p>
+    <div id="pending-comments" style="margin-bottom:18px;"></div>
     <div id="review-list"></div>
   </section>
 </main>
 
-<footer>Class Arcade — CS Basics. Demo games are examples. Ratings, comments and submissions are saved in this browser on this computer.</footer>
+<footer>Class Arcade — CS Basics. Demo games are examples. Ratings and comments sync live across devices when the header status says "Live"; submissions are saved in this browser on this computer.</footer>
 <script>
 /* ============ helpers & storage ============ */
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
@@ -191,6 +197,25 @@ function starString(avg, count){
   var full = Math.round(avg), s = '';
   for(var i=1;i<=5;i++) s += (i<=full ? '★' : '☆');
   return '<span class="stars">' + s + '</span> <span class="muted">' + avg.toFixed(1) + ' (' + count + ' rating' + (count===1?'':'s') + ')</span>';
+}
+
+/* ============ live sync state (Firebase Realtime Database, REST API) ============ */
+var DB_URL = 'https://class-arcade-default-rtdb.firebaseio.com';
+var liveState = { enabled:false, online:false, ratings:{}, comments:{}, streams:{} };
+/* Stable database ID for a game: seeded games use their internal ID;
+   approved student games use a slug of the title + their submission ID. */
+function dbIdFor(game){
+  if(game.type === 'custom') return slugify(game.title) + '-' + String(game.id).replace(/^sub-/, '');
+  return game.id;
+}
+function dbRequest(path, opts){
+  opts = opts || {};
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  if(ctrl){ opts.signal = ctrl.signal; setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 10000); }
+  return fetch(DB_URL + path, opts).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
 }
 
 /* ============ seed demo games ============ */
@@ -257,12 +282,50 @@ function findGame(id){ var g = getGames(); for(var i=0;i<g.length;i++) if(g[i].i
 
 /* ============ ratings / comments / updates data ============ */
 function ratingsFor(game){
+  var liveArr = liveRatingsArr(game);
+  if(liveArr) return liveArr;
   var stored = store.get('ca_ratings', {})[game.id] || [];
   return (game.seedRatings || []).concat(stored);
 }
+/* Real (database) ratings as a plain array of star values, or null if the
+   game has none yet — in which case the seeded baseline keeps showing. */
+function liveRatingsArr(game){
+  if(!liveState.enabled) return null;
+  var map = liveState.ratings[dbIdFor(game)];
+  if(!map) return null;
+  var arr = [];
+  for(var k in map){
+    var s = Number(map[k] && map[k].stars);
+    if(s >= 1 && s <= 5) arr.push(s);
+  }
+  return arr.length ? arr : null;
+}
 function commentsFor(game){
+  var liveList = liveCommentsList(game);
+  if(liveList) return liveList;
   var stored = store.get('ca_comments', {})[game.id] || [];
   return (game.seedComments || []).concat(stored);
+}
+/* Database comments for the public list: approved ones (newest first), plus
+   the poster's own pending ones marked as awaiting approval. Returns null if
+   the game has no displayable database comments yet. */
+function liveCommentsList(game){
+  if(!liveState.enabled) return null;
+  var dbId = dbIdFor(game);
+  var map = liveState.comments[dbId];
+  if(!map) return null;
+  var myKeys = store.get('ca_my_pending', {})[dbId] || [];
+  var approved = [], mine = [];
+  for(var k in map){
+    var c = map[k];
+    if(!c) continue;
+    if(c.status === 'approved') approved.push({name:c.name, text:c.text, ts:c.ts || 0});
+    else if(c.status === 'pending' && myKeys.indexOf(k) !== -1) mine.push({name:c.name, text:c.text, ts:c.ts || 0, mine:true});
+  }
+  if(!approved.length && !mine.length) return null;
+  approved.sort(function(a,b){ return b.ts - a.ts; });
+  mine.sort(function(a,b){ return b.ts - a.ts; });
+  return mine.concat(approved);
 }
 function updatesFor(game){
   var stored = store.get('ca_updates', {})[game.id] || [];
@@ -347,6 +410,14 @@ function openGame(id){
   showView('detail');
   renderDetail();
 }
+function commentsListHtml(g){
+  var comments = commentsFor(g);
+  if(!comments.length) return '<p class="muted">No comments yet — be the first!</p>';
+  return comments.map(function(c){
+    var chip = c.mine ? ' <span class="status pending">AWAITING APPROVAL</span>' : '';
+    return '<div class="comment"><span class="cname">' + esc(c.name) + '</span>' + chip + '<span class="cdate">' + fmtDate(c.ts) + '</span><p>' + esc(c.text) + '</p></div>';
+  }).join('');
+}
 function renderDetail(){
   var g = findGame(currentGameId);
   var box = document.getElementById('detail-content');
@@ -361,7 +432,7 @@ function renderDetail(){
         '<h2>' + esc(g.title) + '</h2>' +
         '<p class="muted">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + '</p>' +
         '<div style="margin:8px 0;"><span class="tag">Period ' + esc(g.period) + '</span><span class="tag">' + esc(g.genre) + '</span><span class="tag">Version ' + esc(g.version) + '</span></div>' +
-        starString(avgOf(r), r.length) + '<br>' +
+        '<span id="detail-stars">' + starString(avgOf(r), r.length) + '</span><br>' +
         '<button class="btn btn-primary" style="margin-top:12px; font-size:16px; padding:11px 24px;" onclick="startGame()">▶ Play</button>' +
       '</div></div>' +
     '<div id="player"></div>' +
@@ -381,17 +452,16 @@ function renderDetail(){
         '<div class="field"><label for="u-version">New version number</label><input type="text" id="u-version" required maxlength="10" placeholder="e.g. 1.4"></div>' +
         '<div class="field"><label for="u-text">What\'s new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
         '<button type="submit" class="btn">Post update</button></form></div>' +
-    '<div class="panel"><h3>💬 Comments (' + comments.length + ')</h3>' +
+    '<div class="panel"><h3 id="comments-title">💬 Comments (' + comments.length + ')</h3>' +
       '<p class="muted" style="margin-bottom:8px;">Comments may be reviewed by your teacher.</p><div id="comments-list">' +
-      (comments.length ? comments.map(function(c){
-        return '<div class="comment"><span class="cname">' + esc(c.name) + '</span><span class="cdate">' + fmtDate(c.ts) + '</span><p>' + esc(c.text) + '</p></div>';
-      }).join('') : '<p class="muted">No comments yet — be the first!</p>') +
+      commentsListHtml(g) +
       '</div>' +
       '<form onsubmit="return handleComment(event)" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">' +
         '<div class="field"><label for="c-name">Your name (first name + last initial)</label><input type="text" id="c-name" required maxlength="40"></div>' +
         '<div class="field"><label for="c-text">Your comment</label><textarea id="c-text" required maxlength="500"></textarea>' +
         '<p class="muted" style="margin-top:4px;">Class rule: be specific with praise, and add one suggestion.</p></div>' +
-        '<button type="submit" class="btn">Post comment</button></form></div>';
+        '<button type="submit" class="btn">Post comment</button></form>' +
+      '<p class="muted" id="comment-msg" style="margin-top:8px;"></p></div>';
   paintStars(0);
 }
 function paintStars(n){
@@ -401,25 +471,87 @@ function paintStars(n){
   var btns = document.querySelectorAll('#rate-stars button');
   btns.forEach(function(b){ b.classList.toggle('lit', Number(b.getAttribute('data-n')) <= lit); });
 }
-function addRating(n){
+function saveLocalRating(n){
   var all = store.get('ca_ratings', {});
   if(!all[currentGameId]) all[currentGameId] = [];
   all[currentGameId].push(n);
   store.set('ca_ratings', all);
+}
+function finishRating(n){
   renderDetail();
   var msg = document.getElementById('rate-msg');
   if(msg) msg.innerHTML = 'Thanks for rating! You gave it ' + n + ' star' + (n===1?'':'s') + '. ' + msg.textContent;
+}
+function addRating(n){
+  var g = findGame(currentGameId);
+  if(liveState.enabled && g){
+    paintStars(n);
+    var msg0 = document.getElementById('rate-msg');
+    if(msg0) msg0.textContent = 'Saving your rating…';
+    var dbId = dbIdFor(g);
+    dbRequest('/ratings/' + encodeURIComponent(dbId) + '.json', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({stars:n, ts:Date.now()})
+    }).then(function(res){
+      if(res && res.name){
+        if(!liveState.ratings[dbId]) liveState.ratings[dbId] = {};
+        liveState.ratings[dbId][res.name] = {stars:n, ts:Date.now()};
+      }
+      finishRating(n);
+    }).catch(function(){
+      /* Database unreachable mid-session: keep the rating visible on this
+         device for the session so the student's tap is never lost. */
+      if(!liveState.ratings[dbId]) liveState.ratings[dbId] = {};
+      liveState.ratings[dbId]['local-' + Date.now()] = {stars:n, ts:Date.now()};
+      finishRating(n);
+    });
+    return;
+  }
+  saveLocalRating(n);
+  finishRating(n);
+}
+function saveLocalComment(name, text, note){
+  var all = store.get('ca_comments', {});
+  if(!all[currentGameId]) all[currentGameId] = [];
+  all[currentGameId].push({name:name, text:text, ts:Date.now()});
+  store.set('ca_comments', all);
+  renderDetail();
+  if(note){
+    var m = document.getElementById('comment-msg');
+    if(m) m.textContent = note;
+  }
 }
 function handleComment(ev){
   ev.preventDefault();
   var name = document.getElementById('c-name').value.trim();
   var text = document.getElementById('c-text').value.trim();
   if(!name || !text) return false;
-  var all = store.get('ca_comments', {});
-  if(!all[currentGameId]) all[currentGameId] = [];
-  all[currentGameId].push({name:name, text:text, ts:Date.now()});
-  store.set('ca_comments', all);
-  renderDetail();
+  var g = findGame(currentGameId);
+  if(liveState.enabled && g){
+    var dbId = dbIdFor(g);
+    var payload = {name:name, text:text, status:'pending', ts:Date.now()};
+    dbRequest('/comments/' + encodeURIComponent(dbId) + '.json', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(res){
+      if(res && res.name){
+        if(!liveState.comments[dbId]) liveState.comments[dbId] = {};
+        liveState.comments[dbId][res.name] = payload;
+        var mine = store.get('ca_my_pending', {});
+        if(!mine[dbId]) mine[dbId] = [];
+        mine[dbId].push(res.name);
+        store.set('ca_my_pending', mine);
+      }
+      renderDetail();
+      var m = document.getElementById('comment-msg');
+      if(m) m.textContent = 'Thanks! Your comment is waiting for teacher approval.';
+      updateReviewBadge();
+    }).catch(function(){
+      saveLocalComment(name, text, 'The live database could not be reached, so your comment was saved on this device only.');
+    });
+    return false;
+  }
+  saveLocalComment(name, text, '');
   return false;
 }
 function handleUpdate(ev){
@@ -791,6 +923,178 @@ function setSubmissionStatus(id, status){
 buildEmojiPicker();
 updateReviewBadge();
 renderLibrary();
+</script>
+<script>
+/* ============ live sync engine (Firebase RTDB REST + streaming) ============ */
+function updateSyncIndicator(){
+  var dot = document.getElementById('sync-dot');
+  var lab = document.getElementById('sync-label');
+  if(!dot || !lab) return;
+  if(liveState.online){ dot.className = 'sync-dot on'; lab.textContent = 'Live'; }
+  else { dot.className = 'sync-dot off'; lab.textContent = 'This device only'; }
+}
+/* Re-render only the lightweight parts of the current view when live data
+   changes — never rebuilds the player or a form the student is typing in. */
+function refreshLiveViews(){
+  updateSyncIndicator();
+  updateReviewBadge();
+  var active = document.querySelector('.view.active');
+  if(!active) return;
+  if(active.id === 'view-library') renderLibrary();
+  else if(active.id === 'view-detail') refreshDetailLive();
+  else if(active.id === 'view-review') renderPendingComments();
+}
+function refreshDetailLive(){
+  var g = findGame(currentGameId);
+  if(!g) return;
+  var r = ratingsFor(g);
+  var ds = document.getElementById('detail-stars');
+  if(ds) ds.innerHTML = starString(avgOf(r), r.length);
+  var rm = document.getElementById('rate-msg');
+  if(rm) rm.textContent = 'Tap a star to rate. Average: ' + (r.length ? avgOf(r).toFixed(1) : '—') + ' from ' + r.length + ' rating' + (r.length === 1 ? '' : 's') + '.';
+  paintStars(0);
+  var comments = commentsFor(g);
+  var ct = document.getElementById('comments-title');
+  if(ct) ct.textContent = '💬 Comments (' + comments.length + ')';
+  var cl = document.getElementById('comments-list');
+  if(cl) cl.innerHTML = commentsListHtml(g);
+}
+function streamParts(path){ return String(path || '/').split('/').filter(function(p){ return p.length; }); }
+function streamSet(kind, path, data){
+  var parts = streamParts(path);
+  if(!parts.length){ liveState[kind] = data || {}; return; }
+  var node = liveState[kind];
+  for(var i = 0; i < parts.length - 1; i++){
+    if(typeof node[parts[i]] !== 'object' || node[parts[i]] === null) node[parts[i]] = {};
+    node = node[parts[i]];
+  }
+  var last = parts[parts.length - 1];
+  if(data === null) delete node[last]; else node[last] = data;
+}
+function streamPatch(kind, path, data){
+  if(!data) return;
+  var parts = streamParts(path);
+  var node = liveState[kind];
+  for(var i = 0; i < parts.length; i++){
+    if(typeof node[parts[i]] !== 'object' || node[parts[i]] === null) node[parts[i]] = {};
+    node = node[parts[i]];
+  }
+  for(var k in data){
+    if(data[k] === null) delete node[k]; else node[k] = data[k];
+  }
+}
+var pollStarted = false;
+function startPolling(){
+  if(pollStarted) return;
+  pollStarted = true;
+  for(var k in liveState.streams){ try{ liveState.streams[k].close(); }catch(e){} }
+  liveState.streams = {};
+  setInterval(function(){
+    dbRequest('/ratings.json').then(function(d){ liveState.ratings = d || {}; liveState.online = true; refreshLiveViews(); }, function(){ liveState.online = false; updateSyncIndicator(); });
+    dbRequest('/comments.json').then(function(d){ liveState.comments = d || {}; liveState.online = true; refreshLiveViews(); }, function(){ liveState.online = false; updateSyncIndicator(); });
+  }, 15000);
+}
+function startStream(kind){
+  if(typeof EventSource === 'undefined'){ startPolling(); return; }
+  var es;
+  try { es = new EventSource(DB_URL + '/' + kind + '.json'); } catch(e){ startPolling(); return; }
+  liveState.streams[kind] = es;
+  function onEvent(type){
+    return function(ev){
+      try {
+        var msg = JSON.parse(ev.data);
+        if(type === 'put') streamSet(kind, msg.path, msg.data);
+        else streamPatch(kind, msg.path, msg.data);
+        liveState.online = true;
+        refreshLiveViews();
+      } catch(e){}
+    };
+  }
+  es.addEventListener('put', onEvent('put'));
+  es.addEventListener('patch', onEvent('patch'));
+  es.onerror = function(){ if(es.readyState === EventSource.CLOSED) startPolling(); };
+}
+function initLiveSync(){
+  updateSyncIndicator();
+  var loaded = 0, failed = false;
+  function ok(){
+    loaded++;
+    if(loaded === 2 && !failed){
+      liveState.enabled = true;
+      liveState.online = true;
+      updateSyncIndicator();
+      refreshLiveViews();
+      startStream('ratings');
+      startStream('comments');
+    }
+  }
+  function fail(){ failed = true; liveState.online = false; updateSyncIndicator(); }
+  dbRequest('/ratings.json').then(function(d){ liveState.ratings = d || {}; ok(); }, fail);
+  dbRequest('/comments.json').then(function(d){ liveState.comments = d || {}; ok(); }, fail);
+}
+
+/* ============ pending comment moderation (Teacher Review) ============ */
+function allPendingComments(){
+  var titleByDb = {};
+  getGames().forEach(function(g){ titleByDb[dbIdFor(g)] = g.title; });
+  var out = [];
+  for(var dbId in liveState.comments){
+    var map = liveState.comments[dbId];
+    for(var k in map){
+      var c = map[k];
+      if(c && c.status === 'pending') out.push({dbId:dbId, key:k, title:titleByDb[dbId] || dbId, name:c.name, text:c.text, ts:c.ts || 0});
+    }
+  }
+  out.sort(function(a,b){ return b.ts - a.ts; });
+  return out;
+}
+function renderPendingComments(){
+  var box = document.getElementById('pending-comments');
+  if(!box) return;
+  if(!liveState.enabled){
+    box.innerHTML = '<div class="panel"><h3>💬 Pending Comments</h3><p class="muted">Live sync is off (this device only), so there is no shared comment queue to moderate. Comments posted on this device appear right away, as before.</p></div>';
+    return;
+  }
+  var list = allPendingComments();
+  var html = '<div class="panel"><h3>💬 Pending Comments (' + list.length + ')</h3>';
+  if(!list.length){
+    html += '<p class="muted">No comments are waiting for approval.</p>';
+  } else {
+    html += list.map(function(c){
+      return '<div class="comment"><span class="cname">' + esc(c.name) + '</span><span class="cdate">' + fmtDate(c.ts) + ' · on ' + esc(c.title) + '</span><p>' + esc(c.text) + '</p>' +
+        '<div style="margin-top:7px;"><button class="btn btn-primary" onclick="approveComment(\'' + c.dbId + '\',\'' + c.key + '\')">✔ Approve</button> ' +
+        '<button class="btn btn-danger" onclick="rejectComment(\'' + c.dbId + '\',\'' + c.key + '\')">✖ Reject</button></div></div>';
+    }).join('');
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+function approveComment(dbId, key){
+  if(liveState.comments[dbId] && liveState.comments[dbId][key]) liveState.comments[dbId][key].status = 'approved';
+  refreshLiveViews();
+  dbRequest('/comments/' + encodeURIComponent(dbId) + '/' + encodeURIComponent(key) + '.json', {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status:'approved'})
+  }).catch(function(){ alert('Could not reach the database to approve that comment — it may reappear as pending.'); });
+}
+function rejectComment(dbId, key){
+  if(liveState.comments[dbId]) delete liveState.comments[dbId][key];
+  refreshLiveViews();
+  dbRequest('/comments/' + encodeURIComponent(dbId) + '/' + encodeURIComponent(key) + '.json', {
+    method:'DELETE'
+  }).catch(function(){ alert('Could not reach the database to reject that comment — it may reappear as pending.'); });
+}
+
+/* Badge + review wiring: the review badge also counts pending comments,
+   and the review view also renders the pending-comments queue. */
+var _origRenderReview = renderReview;
+renderReview = function(){ _origRenderReview(); renderPendingComments(); };
+updateReviewBadge = function(){
+  var n = getSubmissions().filter(function(s){ return s.status === 'pending'; }).length + allPendingComments().length;
+  document.getElementById('review-badge').innerHTML = n ? '<span class="badge">' + n + '</span>' : '';
+};
+updateReviewBadge();
+initLiveSync();
 </script>
 </body>
 </html>
