@@ -65,6 +65,13 @@
   #player{margin-bottom:18px;}
   #player:empty{display:none;}
   .player-box{background:#05080f; border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;}
+  .player-box:fullscreen{border-radius:0; overflow:auto; padding:14px;}
+  .player-box:fullscreen iframe.game-frame{height:calc(100vh - 80px) !important;}
+  .player-box:fullscreen canvas.game{height:calc(100vh - 210px); width:auto; max-width:96vw;}
+  .card-cover, .detail-cover{overflow:hidden;}
+  .card-cover img.cover-img, .detail-cover img.cover-img{width:100%; height:100%; object-fit:cover; display:block;}
+  .featured .big-emoji img.cover-img{width:128px; height:128px; object-fit:cover; border-radius:14px; display:block;}
+  .review-thumb img.cover-img{width:100%; height:100%; object-fit:cover; display:block;}
   canvas.game{background:#020617; border:1px solid var(--border); border-radius:8px; max-width:100%;}
   .ctl-row{display:flex; gap:6px; justify-content:center; margin-top:10px; flex-wrap:wrap;}
   .ctl-btn{background:var(--card2); color:var(--text); border:1px solid var(--border); border-radius:8px; width:52px; height:44px; font-size:19px; cursor:pointer;}
@@ -160,6 +167,10 @@
         <div class="field"><label for="s-howto">How to play *</label><textarea id="s-howto" required maxlength="400" placeholder="Controls and rules…"></textarea></div>
         <div class="field"><label>Cover emoji</label>
           <div class="emoji-picker" id="emoji-picker"></div></div>
+        <div class="field"><label for="s-cover-file">Cover image (optional — replaces the emoji)</label>
+          <input type="file" id="s-cover-file" accept="image/*" onchange="previewCoverImage(event)">
+          <p class="muted" style="margin-top:5px;">Upload a screenshot or artwork for your game (PNG or JPG, under about 4 MB — it gets shrunk automatically). If you don't upload one, your emoji is used.</p>
+          <div id="s-cover-preview" style="margin-top:8px;"></div></div>
         <div class="field"><label for="s-color">Cover color</label><input type="color" id="s-color" value="#2563eb"></div>
         <div class="field"><label for="s-code">Your game's HTML code *</label>
           <textarea id="s-code" required style="min-height:150px; font-family:monospace; font-size:12.5px;" placeholder="Paste your whole HTML file here…"></textarea></div>
@@ -271,7 +282,7 @@ function getGames(){
     if(s.status === 'approved'){
       games.push({ id:'sub-' + s.id, type:'custom', code:s.code, title:s.title, creator:s.name,
         partner:s.partner || '', period:s.period, genre:s.genre, version:s.version || '1.0',
-        emoji:s.emoji, color:s.color, desc:s.desc, howto:s.howto,
+        emoji:s.emoji, color:s.color, coverImg:s.coverImg || '', desc:s.desc, howto:s.howto,
         seedRatings:[], seedComments:[],
         seedUpdates: s.whatsnew ? [{version:s.version || '1.0', text:s.whatsnew, ts:s.ts}] : [{version:s.version || '1.0', text:'First release!', ts:s.ts}] });
     }
@@ -279,6 +290,16 @@ function getGames(){
   return games;
 }
 function findGame(id){ var g = getGames(); for(var i=0;i<g.length;i++) if(g[i].id === id) return g[i]; return null; }
+function coverHtml(g){
+  if(g && g.coverImg) return '<img class="cover-img" src="' + g.coverImg + '" alt="">';
+  return esc(g ? g.emoji : '🎮');
+}
+function toggleFullscreen(){
+  var box = document.querySelector('#player .player-box');
+  if(!box) return;
+  if(document.fullscreenElement){ if(document.exitFullscreen) document.exitFullscreen(); }
+  else if(box.requestFullscreen){ box.requestFullscreen(); }
+}
 
 /* ============ ratings / comments / updates data ============ */
 function ratingsFor(game){
@@ -369,7 +390,7 @@ function renderLibrary(){
   var fr = ratingsFor(f);
   document.getElementById('featured').innerHTML =
     '<div class="featured" style="border-color:var(--gold);">' +
-      '<div class="big-emoji">' + esc(f.emoji) + '</div>' +
+      '<div class="big-emoji">' + coverHtml(f) + '</div>' +
       '<div style="flex:1; min-width:230px;">' +
         '<span class="tag gold">★ FEATURED GAME</span>' +
         '<h2>' + esc(f.title) + '</h2>' +
@@ -393,7 +414,7 @@ function renderLibrary(){
   document.getElementById('game-grid').innerHTML = shown.map(function(g){
     var r = ratingsFor(g);
     return '<div class="card" onclick="openGame(\'' + g.id + '\')">' +
-      '<div class="card-cover" style="background:' + esc(g.color) + ';">' + esc(g.emoji) + '</div>' +
+      '<div class="card-cover" style="background:' + esc(g.color) + ';">' + coverHtml(g) + '</div>' +
       '<div class="card-body"><h3>' + esc(g.title) + '</h3>' +
       '<div class="byline">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + ' · Period ' + esc(g.period) + '</div>' +
       '<p>' + esc(g.desc) + '</p>' +
@@ -427,7 +448,7 @@ function renderDetail(){
   var updates = updatesFor(g);
   box.innerHTML =
     '<div class="detail-head">' +
-      '<div class="detail-cover" style="background:' + esc(g.color) + ';">' + esc(g.emoji) + '</div>' +
+      '<div class="detail-cover" style="background:' + esc(g.color) + ';">' + coverHtml(g) + '</div>' +
       '<div style="flex:1; min-width:240px;">' +
         '<h2>' + esc(g.title) + '</h2>' +
         '<p class="muted">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + '</p>' +
@@ -575,16 +596,29 @@ function startGame(){
   if(g.type === 'custom'){
     p.innerHTML = '<div class="player-box"><p class="muted" style="margin-bottom:10px;">▶ Now playing: ' + esc(g.title) + ' (submitted game)</p></div>';
     var frame = document.createElement('iframe');
-    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.setAttribute('sandbox', 'allow-scripts allow-modals');
+    frame.className = 'game-frame';
     frame.style.width = '100%'; frame.style.height = '480px';
     frame.style.border = '1px solid var(--border)'; frame.style.borderRadius = '8px'; frame.style.background = '#fff';
     frame.srcdoc = g.code || '<p>No code was included with this game.</p>';
     p.querySelector('.player-box').appendChild(frame);
-    return;
   }
-  if(g.gameKey === 'snake') launchSnake(p);
+  else if(g.gameKey === 'snake') launchSnake(p);
   else if(g.gameKey === 'coin') launchCoin(p);
   else if(g.gameKey === 'dragon') launchDragon(p);
+  var box = p.querySelector('.player-box');
+  if(box && !box.querySelector('.fs-btn')){
+    var fb = document.createElement('button');
+    fb.className = 'btn fs-btn'; fb.type = 'button';
+    fb.textContent = '⛶ Full screen';
+    fb.style.cssText = 'float:right; margin-bottom:10px;';
+    fb.onclick = toggleFullscreen;
+    box.insertBefore(fb, box.firstChild);
+    var hint = document.createElement('p');
+    hint.className = 'muted'; hint.style.cssText = 'clear:both; margin-top:8px;';
+    hint.textContent = 'Tip: press Esc to leave full screen.';
+    box.appendChild(hint);
+  }
 }
 </script>
 <script>
@@ -807,6 +841,29 @@ function pickedEmoji(){
   return el ? el.value : '🎮';
 }
 function slugify(t){ return (t || 'game').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'game'; }
+var pendingCoverImg = '';
+function previewCoverImage(ev){
+  var f = ev.target.files && ev.target.files[0];
+  var pv = document.getElementById('s-cover-preview');
+  pendingCoverImg = '';
+  if(!f){ pv.innerHTML = ''; return; }
+  if(f.size > 4 * 1024 * 1024){ alert('That image is too big — please pick one under about 4 MB.'); ev.target.value = ''; pv.innerHTML = ''; return; }
+  var rd = new FileReader();
+  rd.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      /* shrink to max 800px wide so the submission file stays a sane size */
+      var scale = Math.min(1, 800 / img.width);
+      var w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+      var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      pendingCoverImg = cv.toDataURL('image/jpeg', 0.85);
+      pv.innerHTML = '<img src="' + pendingCoverImg + '" style="max-width:230px; max-height:150px; border-radius:10px; border:1px solid var(--border);" alt="Cover preview"><p class="muted" style="margin-top:4px;">That\'s your cover ✓ — it replaces the emoji.</p>';
+    };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+}
 function handleSubmit(ev){
   ev.preventDefault();
   var sub = {
@@ -819,6 +876,7 @@ function handleSubmit(ev){
     desc: document.getElementById('s-desc').value.trim(),
     howto: document.getElementById('s-howto').value.trim(),
     emoji: pickedEmoji(),
+    coverImg: pendingCoverImg || '',
     color: document.getElementById('s-color').value,
     code: document.getElementById('s-code').value,
     isUpdate: document.getElementById('s-isupdate').checked,
@@ -834,6 +892,8 @@ function handleSubmit(ev){
   lastSubmissionId = sub.id;
   document.getElementById('submit-success').classList.add('show');
   document.getElementById('submit-form').reset();
+  pendingCoverImg = '';
+  document.getElementById('s-cover-preview').innerHTML = '';
   document.getElementById('s-version').value = '1.0';
   document.getElementById('s-color').value = '#2563eb';
   document.getElementById('whatsnew-wrap').style.display = 'none';
@@ -852,6 +912,7 @@ function submissionFileText(s){
     '  Genre      : ' + s.genre,
     '  Version    : ' + s.version + (s.isUpdate ? '  (UPDATE)' : ''),
     '  Cover      : ' + s.emoji + '  ' + s.color,
+    (s.coverImg ? '  Cover image (data): ' + s.coverImg : ''),
     '  Description: ' + s.desc,
     '  How to play: ' + s.howto,
     (s.whatsnew ? '  What\'s new: ' + s.whatsnew : ''),
@@ -901,7 +962,7 @@ function renderReview(){
     btns += '<button class="btn" onclick="downloadSubmissionById(\'' + s.id + '\')">⬇ Download file</button>';
     return '<div class="review-card">' +
       '<div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">' +
-        '<div style="width:64px; height:64px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:36px; background:' + esc(s.color) + ';">' + esc(s.emoji) + '</div>' +
+        '<div class="review-thumb" style="width:64px; height:64px; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:36px; background:' + esc(s.color) + ';">' + coverHtml(s) + '</div>' +
         '<div style="flex:1; min-width:220px;">' +
           '<h3 style="font-size:18px;">' + esc(s.title) + '<span class="status ' + esc(s.status) + '">' + esc(s.status.toUpperCase()) + '</span></h3>' +
           '<p class="muted">by ' + esc(s.name) + (s.partner ? ' &amp; ' + esc(s.partner) : '') + ' · Period ' + esc(s.period) + ' · ' + esc(s.genre) + ' · v' + esc(s.version) + (s.isUpdate ? ' · UPDATE' : '') + ' · ' + fmtDate(s.ts) + '</p>' +
