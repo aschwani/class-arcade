@@ -113,7 +113,7 @@
     <nav>
       <button id="nav-library" class="active" onclick="showView('library')">Library</button>
       <button id="nav-submit" onclick="showView('submit')">Submit Your Game</button>
-      <button id="nav-review" onclick="showView('review')">Teacher Review<span id="review-badge"></span></button>
+      <button id="nav-review" onclick="showView('review')">🔒 Teacher Review<span id="review-badge"></span></button>
     </nav>
     <span class="sync-status" title="Live sync status"><span id="sync-dot" class="sync-dot off"></span><span id="sync-label">Connecting…</span></span>
     <div class="filters" id="library-filters">
@@ -361,7 +361,37 @@ function stopPlayer(){
   if(playerCleanup){ try{ playerCleanup(); }catch(e){} playerCleanup = null; }
   var p = document.getElementById('player'); if(p) p.innerHTML = '';
 }
+/* ============ teacher review lock ============ */
+var REVIEW_HASH = '1ff471b0579ec9f1b7dff227d00445bc5094503b1ac7a7be4a5261a8d0fad851';
+function reviewUnlocked(){
+  try { return sessionStorage.getItem('ca_review_unlocked') === '1'; } catch(e){ return false; }
+}
+function sha256Hex(text){
+  var data = new TextEncoder().encode(text);
+  return crypto.subtle.digest('SHA-256', data).then(function(buf){
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){
+      return ('0' + b.toString(16)).slice(-2);
+    }).join('');
+  });
+}
+function askReviewPassword(){
+  if(!(window.crypto && crypto.subtle)){
+    alert('This browser cannot check the password here — try Chrome or Safari.');
+    return;
+  }
+  var pw = prompt('🔒 Teacher Review is locked. Enter the teacher password:');
+  if(pw === null) return;
+  sha256Hex(pw).then(function(h){
+    if(h === REVIEW_HASH){
+      try { sessionStorage.setItem('ca_review_unlocked', '1'); } catch(e){}
+      showView('review');
+    } else {
+      alert('Wrong password — Teacher Review stays locked.');
+    }
+  });
+}
 function showView(name){
+  if(name === 'review' && !reviewUnlocked()){ askReviewPassword(); return; }
   stopPlayer();
   ['library','detail','submit','review'].forEach(function(v){
     document.getElementById('view-' + v).classList.toggle('active', v === name);
@@ -973,6 +1003,7 @@ function renderReview(){
   }).join('');
 }
 function setSubmissionStatus(id, status){
+  if(!reviewUnlocked()){ alert('Teacher Review is locked.'); return; }
   var list = getSubmissions();
   list.forEach(function(s){ if(s.id === id) s.status = status; });
   saveSubmissions(list);
@@ -1131,6 +1162,7 @@ function renderPendingComments(){
   box.innerHTML = html;
 }
 function approveComment(dbId, key){
+  if(!reviewUnlocked()){ alert('Teacher Review is locked.'); return; }
   if(liveState.comments[dbId] && liveState.comments[dbId][key]) liveState.comments[dbId][key].status = 'approved';
   refreshLiveViews();
   dbRequest('/comments/' + encodeURIComponent(dbId) + '/' + encodeURIComponent(key) + '.json', {
@@ -1139,6 +1171,7 @@ function approveComment(dbId, key){
   }).catch(function(){ alert('Could not reach the database to approve that comment — it may reappear as pending.'); });
 }
 function rejectComment(dbId, key){
+  if(!reviewUnlocked()){ alert('Teacher Review is locked.'); return; }
   if(liveState.comments[dbId]) delete liveState.comments[dbId][key];
   refreshLiveViews();
   dbRequest('/comments/' + encodeURIComponent(dbId) + '/' + encodeURIComponent(key) + '.json', {
