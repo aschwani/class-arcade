@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Class Arcade</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0a0f1e; --bg2:#0d1530; --card:#141c33; --card2:#1a2440;
+    --border:#263354; --text:#e8edf7; --muted:#9aa7c2;
+    --green:#4ade80; --green-d:#16a34a; --gold:#f5c542;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:Verdana, Geneva, Tahoma, sans-serif; min-height:100vh;}
+  a{color:var(--green);}
+  header{background:var(--bg2); border-bottom:2px solid var(--border); padding:14px 20px; position:sticky; top:0; z-index:50;}
+  .header-inner{max-width:1150px; margin:0 auto; display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
+  .logo{font-size:26px; font-weight:bold; color:var(--text); cursor:pointer; white-space:nowrap;}
+  .logo span{color:var(--green);}
+  .logo .gold{color:var(--gold);}
+  nav{display:flex; gap:8px; flex-wrap:wrap;}
+  nav button, .btn{background:var(--card2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; font-family:inherit;}
+  nav button:hover, .btn:hover{border-color:var(--green); color:var(--green);}
+  nav button.active{background:var(--green-d); border-color:var(--green-d); color:#fff;}
+  .btn-primary{background:var(--green-d); border-color:var(--green-d); color:#fff; font-weight:bold;}
+  .btn-primary:hover{background:var(--green); color:#06280f;}
+  .btn-gold{background:#8a6d1c; border-color:var(--gold); color:#fff;}
+  .btn-danger:hover{border-color:#f87171; color:#f87171;}
+  .badge{background:var(--gold); color:#111; border-radius:10px; padding:0 7px; font-size:12px; font-weight:bold; margin-left:5px;}
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+  input[type="text"], input[type="search"], select, textarea, input[type="color"]{
+    background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:14px; font-family:inherit;}
+  input[type="color"]{padding:2px; width:52px; height:36px;}
+  textarea{width:100%; min-height:90px; resize:vertical;}
+  main{max-width:1150px; margin:0 auto; padding:20px;}
+  .featured{border:1px solid var(--border); border-radius:14px; padding:26px; margin-bottom:24px; display:flex; gap:22px; flex-wrap:wrap; align-items:center; background:var(--card);}
+  .featured .big-emoji{font-size:96px; line-height:1;}
+  .featured h2{font-size:28px; margin-bottom:6px;}
+  .tag{display:inline-block; background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:2px 10px; font-size:12px; color:var(--muted); margin:2px 3px 2px 0;}
+  .tag.gold{color:var(--gold); border-color:var(--gold);}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:16px;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; cursor:pointer; transition:transform .08s, border-color .08s;}
+  .card:hover{transform:translateY(-3px); border-color:var(--green);}
+  .card-cover{height:120px; display:flex; align-items:center; justify-content:center; font-size:62px;}
+  .card-body{padding:13px 15px 15px;}
+  .card-body h3{font-size:17px; margin-bottom:3px;}
+  .byline{color:var(--muted); font-size:12.5px; margin-bottom:6px;}
+  .card-body p{font-size:13.5px; color:#cdd6ea; margin-bottom:8px; min-height:34px;}
+  .stars{color:var(--gold); font-size:14px; letter-spacing:1px;}
+  .stars .none{color:var(--muted); letter-spacing:0; font-size:12.5px;}
+  .muted{color:var(--muted); font-size:13px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .detail-head{display:flex; gap:22px; flex-wrap:wrap; margin-bottom:18px;}
+  .detail-cover{width:250px; height:190px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:104px; flex-shrink:0;}
+  .detail-head h2{font-size:30px; margin-bottom:5px;}
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:18px;}
+  .panel h3{margin-bottom:10px; font-size:19px;}
+  #player{margin-bottom:18px;}
+  #player:empty{display:none;}
+  .player-box{background:#05080f; border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;}
+  canvas.game{background:#020617; border:1px solid var(--border); border-radius:8px; max-width:100%;}
+  .ctl-row{display:flex; gap:6px; justify-content:center; margin-top:10px; flex-wrap:wrap;}
+  .ctl-btn{background:var(--card2); color:var(--text); border:1px solid var(--border); border-radius:8px; width:52px; height:44px; font-size:19px; cursor:pointer;}
+  .score-line{font-size:17px; margin-bottom:10px; color:var(--gold); font-weight:bold;}
+  .rate-stars button{background:none; border:none; font-size:32px; cursor:pointer; color:#475569; padding:0 2px;}
+  .rate-stars button.lit{color:var(--gold);}
+  .comment{border-top:1px solid var(--border); padding:10px 0;}
+  .comment:first-of-type{border-top:none;}
+  .comment .cname{font-weight:bold; color:var(--green); font-size:14px;}
+  .comment .cdate{color:var(--muted); font-size:12px; margin-left:8px;}
+  .comment p{font-size:14px; margin-top:3px;}
+  .update-item{border-left:3px solid var(--gold); padding:6px 0 6px 12px; margin-bottom:10px;}
+  .update-item .uver{color:var(--gold); font-weight:bold; font-size:14px;}
+  form .field{margin-bottom:13px;}
+  form label{display:block; font-size:14px; font-weight:bold; margin-bottom:5px;}
+  form input[type="text"], form select{width:100%;}
+  .emoji-picker{display:flex; gap:8px; flex-wrap:wrap;}
+  .emoji-picker label{font-size:28px; background:var(--card); border:2px solid var(--border); border-radius:10px; padding:4px 9px; cursor:pointer; font-weight:normal;}
+  .emoji-picker input{display:none;}
+  .emoji-picker label:has(input:checked){border-color:var(--green); background:var(--card2);}
+  .success{background:#0f2e1a; border:1px solid var(--green-d); border-radius:12px; padding:18px; margin-bottom:18px; display:none;}
+  .success.show{display:block;}
+  .review-card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:14px;}
+  .status{font-size:12px; font-weight:bold; border-radius:10px; padding:2px 10px; margin-left:8px;}
+  .status.pending{background:#8a6d1c; color:#fff;}
+  .status.approved{background:var(--green-d); color:#fff;}
+  .status.rejected{background:#991b1b; color:#fff;}
+  .dragon-btn{font-size:110px; background:none; border:none; cursor:pointer; line-height:1.1;}
+  .dragon-btn:active{transform:scale(.94);}
+  .shop-row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px;}
+  footer{max-width:1150px; margin:0 auto; padding:10px 20px 30px; color:var(--muted); font-size:12.5px;}
+  @media (max-width:600px){ .detail-cover{width:100%;} .filters{margin-left:0;} }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo" onclick="showView('library')">🎮 Class <span>Arcade</span> <span class="gold">★</span></div>
+    <nav>
+      <button id="nav-library" class="active" onclick="showView('library')">Library</button>
+      <button id="nav-submit" onclick="showView('submit')">Submit Your Game</button>
+      <button id="nav-review" onclick="showView('review')">Teacher Review<span id="review-badge"></span></button>
+    </nav>
+    <div class="filters" id="library-filters">
+      <input type="search" id="f-search" placeholder="Search games…" oninput="renderLibrary()">
+      <select id="f-period" onchange="renderLibrary()">
+        <option value="all">All Periods</option>
+        <option value="1">Period 1</option>
+        <option value="7">Period 7</option>
+      </select>
+      <select id="f-genre" onchange="renderLibrary()"><option value="all">All Genres</option></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- LIBRARY VIEW -->
+  <section id="view-library" class="view active">
+    <div id="featured"></div>
+    <div class="grid" id="game-grid"></div>
+    <p class="muted" id="no-results" style="display:none; margin-top:14px;">No games match your search. Try a different word or filter.</p>
+  </section>
+
+  <!-- DETAIL VIEW -->
+  <section id="view-detail" class="view">
+    <button class="btn" onclick="showView('library')">← Back to Library</button>
+    <div id="detail-content" style="margin-top:16px;"></div>
+  </section>
+
+  <!-- SUBMIT VIEW -->
+  <section id="view-submit" class="view">
+    <h2 style="margin-bottom:6px;">Submit Your Game</h2>
+    <p class="muted" style="margin-bottom:16px;">Fill this out to hand in your game. When you submit, you'll get a file to download and turn in — and your game will wait in Teacher Review until your teacher approves it.</p>
+    <div class="success" id="submit-success">
+      <h3 style="color:var(--green); margin-bottom:6px;">✅ Your submission is ready!</h3>
+      <p style="font-size:14px; margin-bottom:12px;">Download your submission file and hand it in to your teacher. Your game is also saved in Teacher Review on this computer.</p>
+      <button class="btn btn-primary" id="download-sub-btn" onclick="downloadLastSubmission()">⬇ Download submission file</button>
+    </div>
+    <div class="panel">
+      <form id="submit-form" onsubmit="return handleSubmit(event)">
+        <div class="field"><label for="s-title">Game title *</label><input type="text" id="s-title" required maxlength="60"></div>
+        <div class="field"><label for="s-name">Your name (first name + last initial) *</label><input type="text" id="s-name" required maxlength="40" placeholder="e.g. Sam T."></div>
+        <div class="field"><label for="s-partner">Partner name (optional)</label><input type="text" id="s-partner" maxlength="40"></div>
+        <div class="field"><label for="s-period">Period *</label>
+          <select id="s-period"><option value="1">Period 1</option><option value="7">Period 7</option></select></div>
+        <div class="field"><label for="s-genre">Genre *</label>
+          <select id="s-genre">
+            <option>Action</option><option>Puzzle</option><option>Adventure</option>
+            <option>Racing</option><option>Clicker</option><option>Platformer</option><option>Other</option>
+          </select></div>
+        <div class="field"><label for="s-desc">Description *</label><textarea id="s-desc" required maxlength="400" placeholder="What is your game about?"></textarea></div>
+        <div class="field"><label for="s-howto">How to play *</label><textarea id="s-howto" required maxlength="400" placeholder="Controls and rules…"></textarea></div>
+        <div class="field"><label>Cover emoji</label>
+          <div class="emoji-picker" id="emoji-picker"></div></div>
+        <div class="field"><label for="s-color">Cover color</label><input type="color" id="s-color" value="#2563eb"></div>
+        <div class="field"><label for="s-code">Your game's HTML code *</label>
+          <textarea id="s-code" required style="min-height:150px; font-family:monospace; font-size:12.5px;" placeholder="Paste your whole HTML file here…"></textarea></div>
+        <div class="field">
+          <label style="font-weight:normal;"><input type="checkbox" id="s-isupdate" onchange="document.getElementById('whatsnew-wrap').style.display = this.checked ? 'block':'none'"> This is an update to a game I already submitted</label>
+        </div>
+        <div class="field" id="whatsnew-wrap" style="display:none;"><label for="s-whatsnew">What's new in this update?</label><textarea id="s-whatsnew" maxlength="300"></textarea></div>
+        <div class="field"><label for="s-version">Version</label><input type="text" id="s-version" value="1.0" maxlength="10"></div>
+        <button type="submit" class="btn btn-primary" style="font-size:16px; padding:11px 22px;">Submit Game</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- TEACHER REVIEW VIEW -->
+  <section id="view-review" class="view">
+    <h2 style="margin-bottom:6px;">Teacher Review</h2>
+    <p class="muted" style="margin-bottom:16px;">Games submitted on this computer wait here. Approve a game to add it to the library, or reject it. (On the class site, submissions arrive as downloaded files — this queue is the on-this-computer demo of that step.)</p>
+    <div id="review-list"></div>
+  </section>
+</main>
+
+<footer>Class Arcade — CS Basics. Demo games are examples. Ratings, comments and submissions are saved in this browser on this computer.</footer>
+<script>
+/* ============ helpers & storage ============ */
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+var store = {
+  get: function(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set: function(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+function fmtDate(ts){ try { return new Date(ts).toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'}); } catch(e){ return ''; } }
+function starString(avg, count){
+  if(!count) return '<span class="stars"><span class="none">No ratings yet</span></span>';
+  var full = Math.round(avg), s = '';
+  for(var i=1;i<=5;i++) s += (i<=full ? '★' : '☆');
+  return '<span class="stars">' + s + '</span> <span class="muted">' + avg.toFixed(1) + ' (' + count + ' rating' + (count===1?'':'s') + ')</span>';
+}
+
+/* ============ seed demo games ============ */
+var SEED_GAMES = [
+  { id:'neon-snake', type:'builtin', gameKey:'snake', title:'Neon Snake', creator:'Demo Game', partner:'',
+    period:1, genre:'Action', version:'1.2', emoji:'🐍', color:'#14532d',
+    desc:'The classic snake game with a neon twist. Eat the glowing orbs to grow — just don\'t bite yourself or hit the wall!',
+    howto:'Use the arrow keys (or the on-screen buttons) to steer the snake. Eat food to grow longer and score. The game speeds up as you grow. Press Start to play.',
+    seedRatings:[5,5,4,5,4],
+    seedComments:[
+      {name:'Alex R.', text:'Super smooth. The speed-up at 10 points is intense!', ts:1763000000000},
+      {name:'Jordan M.', text:'Love the neon look. One suggestion: add a pause button.', ts:1763100000000}
+    ],
+    seedUpdates:[
+      {version:'1.2', text:'Snake now speeds up as it grows. Added on-screen controls for trackpads.', ts:1762900000000},
+      {version:'1.0', text:'First release!', ts:1762000000000}
+    ] },
+  { id:'coin-catch', type:'builtin', gameKey:'coin', title:'Coin Catch', creator:'Demo Game', partner:'',
+    period:7, genre:'Action', version:'1.1', emoji:'🪙', color:'#854d0e',
+    desc:'Coins are raining down! Slide your basket to catch as many as you can in 30 seconds. Gold coins are worth more — watch out, they fall faster.',
+    howto:'Move the basket with your mouse, or use the left and right arrow keys. Catch coins before they hit the ground. You have 30 seconds — press Start when ready.',
+    seedRatings:[4,5,4,4],
+    seedComments:[
+      {name:'Sam T.', text:'The gold coins are a great touch, they really change your strategy.', ts:1763000000000},
+      {name:'Riley K.', text:'Fun! One suggestion: make the basket a tiny bit wider.', ts:1763150000000}
+    ],
+    seedUpdates:[
+      {version:'1.1', text:'Added gold coins worth 5 points.', ts:1762950000000},
+      {version:'1.0', text:'First release!', ts:1762100000000}
+    ] },
+  { id:'dragon-clicker', type:'builtin', gameKey:'dragon', title:'Dragon Clicker', creator:'Demo Game', partner:'',
+    period:1, genre:'Clicker', version:'1.3', emoji:'🐉', color:'#7f1d1d',
+    desc:'Click the dragon to earn gold coins, then spend them on upgrades. Buy auto-clickers that earn while you watch, and multipliers that make every click worth more.',
+    howto:'Click the dragon to earn coins. Spend coins in the shop: Auto-Clicker earns coins every second, Multiplier makes each click (and each auto-click) worth more. Press Play to start.',
+    seedRatings:[5,4,5,5,4,5],
+    seedComments:[
+      {name:'Casey L.', text:'I got to 1,000 coins in one class period. The multiplier is the way to go.', ts:1763050000000},
+      {name:'Devon P.', text:'Really addictive. One suggestion: add a third upgrade, like a golden dragon.', ts:1763200000000}
+    ],
+    seedUpdates:[
+      {version:'1.3', text:'Balanced upgrade prices so the late game lasts longer.', ts:1762980000000},
+      {version:'1.1', text:'Added the Multiplier upgrade.', ts:1762500000000},
+      {version:'1.0', text:'First release!', ts:1762200000000}
+    ] }
+];
+
+/* ============ game collection ============ */
+function getSubmissions(){ return store.get('ca_submissions', []); }
+function saveSubmissions(list){ store.set('ca_submissions', list); }
+function getGames(){
+  var games = SEED_GAMES.slice();
+  getSubmissions().forEach(function(s){
+    if(s.status === 'approved'){
+      games.push({ id:'sub-' + s.id, type:'custom', code:s.code, title:s.title, creator:s.name,
+        partner:s.partner || '', period:s.period, genre:s.genre, version:s.version || '1.0',
+        emoji:s.emoji, color:s.color, desc:s.desc, howto:s.howto,
+        seedRatings:[], seedComments:[],
+        seedUpdates: s.whatsnew ? [{version:s.version || '1.0', text:s.whatsnew, ts:s.ts}] : [{version:s.version || '1.0', text:'First release!', ts:s.ts}] });
+    }
+  });
+  return games;
+}
+function findGame(id){ var g = getGames(); for(var i=0;i<g.length;i++) if(g[i].id === id) return g[i]; return null; }
+
+/* ============ ratings / comments / updates data ============ */
+function ratingsFor(game){
+  var stored = store.get('ca_ratings', {})[game.id] || [];
+  return (game.seedRatings || []).concat(stored);
+}
+function commentsFor(game){
+  var stored = store.get('ca_comments', {})[game.id] || [];
+  return (game.seedComments || []).concat(stored);
+}
+function updatesFor(game){
+  var stored = store.get('ca_updates', {})[game.id] || [];
+  return stored.concat(game.seedUpdates || []);
+}
+function avgOf(arr){ if(!arr.length) return 0; var t=0; for(var i=0;i<arr.length;i++) t+=arr[i]; return t/arr.length; }
+
+/* ============ views ============ */
+var currentGameId = null;
+var playerCleanup = null;
+function stopPlayer(){
+  if(playerCleanup){ try{ playerCleanup(); }catch(e){} playerCleanup = null; }
+  var p = document.getElementById('player'); if(p) p.innerHTML = '';
+}
+function showView(name){
+  stopPlayer();
+  ['library','detail','submit','review'].forEach(function(v){
+    document.getElementById('view-' + v).classList.toggle('active', v === name);
+    var nav = document.getElementById('nav-' + v);
+    if(nav) nav.classList.toggle('active', v === name);
+  });
+  document.getElementById('library-filters').style.display = (name === 'library') ? 'flex' : 'none';
+  if(name === 'library') renderLibrary();
+  if(name === 'review') renderReview();
+  window.scrollTo(0,0);
+}
+
+/* ============ library ============ */
+function renderLibrary(){
+  var games = getGames();
+  // genre filter options
+  var genreSel = document.getElementById('f-genre');
+  var curGenre = genreSel.value || 'all';
+  var genres = [];
+  games.forEach(function(g){ if(genres.indexOf(g.genre) === -1) genres.push(g.genre); });
+  genreSel.innerHTML = '<option value="all">All Genres</option>' + genres.map(function(g){
+    return '<option value="' + esc(g) + '"' + (g === curGenre ? ' selected' : '') + '>' + esc(g) + '</option>'; }).join('');
+
+  // featured = first game
+  var f = games[0];
+  var fr = ratingsFor(f);
+  document.getElementById('featured').innerHTML =
+    '<div class="featured" style="border-color:var(--gold);">' +
+      '<div class="big-emoji">' + esc(f.emoji) + '</div>' +
+      '<div style="flex:1; min-width:230px;">' +
+        '<span class="tag gold">★ FEATURED GAME</span>' +
+        '<h2>' + esc(f.title) + '</h2>' +
+        '<p class="muted" style="margin-bottom:6px;">by ' + esc(f.creator) + ' · Period ' + esc(f.period) + ' · v' + esc(f.version) + '</p>' +
+        '<p style="font-size:14.5px; margin-bottom:9px;">' + esc(f.desc) + '</p>' +
+        starString(avgOf(fr), fr.length) + '<br>' +
+        '<button class="btn btn-primary" style="margin-top:10px;" onclick="openGame(\'' + f.id + '\')">▶ Play ' + esc(f.title) + '</button>' +
+      '</div></div>';
+
+  // filtering
+  var q = (document.getElementById('f-search').value || '').toLowerCase();
+  var per = document.getElementById('f-period').value;
+  var gen = genreSel.value;
+  var shown = games.filter(function(g){
+    if(per !== 'all' && String(g.period) !== per) return false;
+    if(gen !== 'all' && g.genre !== gen) return false;
+    if(q && (g.title + ' ' + g.creator + ' ' + g.desc + ' ' + g.genre).toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
+  document.getElementById('no-results').style.display = shown.length ? 'none' : 'block';
+  document.getElementById('game-grid').innerHTML = shown.map(function(g){
+    var r = ratingsFor(g);
+    return '<div class="card" onclick="openGame(\'' + g.id + '\')">' +
+      '<div class="card-cover" style="background:' + esc(g.color) + ';">' + esc(g.emoji) + '</div>' +
+      '<div class="card-body"><h3>' + esc(g.title) + '</h3>' +
+      '<div class="byline">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + ' · Period ' + esc(g.period) + '</div>' +
+      '<p>' + esc(g.desc) + '</p>' +
+      starString(avgOf(r), r.length) +
+      '<div style="margin-top:7px;"><span class="tag">' + esc(g.genre) + '</span><span class="tag">v' + esc(g.version) + '</span></div>' +
+      '</div></div>';
+  }).join('');
+}
+</script>
+<script>
+/* ============ detail view ============ */
+function openGame(id){
+  currentGameId = id;
+  showView('detail');
+  renderDetail();
+}
+function renderDetail(){
+  var g = findGame(currentGameId);
+  var box = document.getElementById('detail-content');
+  if(!g){ box.innerHTML = '<p class="muted">That game could not be found.</p>'; return; }
+  var r = ratingsFor(g);
+  var comments = commentsFor(g);
+  var updates = updatesFor(g);
+  box.innerHTML =
+    '<div class="detail-head">' +
+      '<div class="detail-cover" style="background:' + esc(g.color) + ';">' + esc(g.emoji) + '</div>' +
+      '<div style="flex:1; min-width:240px;">' +
+        '<h2>' + esc(g.title) + '</h2>' +
+        '<p class="muted">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + '</p>' +
+        '<div style="margin:8px 0;"><span class="tag">Period ' + esc(g.period) + '</span><span class="tag">' + esc(g.genre) + '</span><span class="tag">Version ' + esc(g.version) + '</span></div>' +
+        starString(avgOf(r), r.length) + '<br>' +
+        '<button class="btn btn-primary" style="margin-top:12px; font-size:16px; padding:11px 24px;" onclick="startGame()">▶ Play</button>' +
+      '</div></div>' +
+    '<div id="player"></div>' +
+    '<div class="panel"><h3>About this game</h3><p style="font-size:14.5px; line-height:1.55;">' + esc(g.desc) + '</p></div>' +
+    '<div class="panel"><h3>How to Play</h3><p style="font-size:14.5px; line-height:1.55;">' + esc(g.howto) + '</p></div>' +
+    '<div class="panel"><h3>⭐ Rate this game</h3>' +
+      '<div class="rate-stars" id="rate-stars">' +
+        [1,2,3,4,5].map(function(n){ return '<button type="button" data-n="' + n + '" onclick="addRating(' + n + ')" onmouseover="paintStars(' + n + ')" onmouseout="paintStars(0)">★</button>'; }).join('') +
+      '</div>' +
+      '<p class="muted" id="rate-msg" style="margin-top:6px;">Tap a star to rate. Average: ' + (r.length ? avgOf(r).toFixed(1) : '—') + ' from ' + r.length + ' rating' + (r.length===1?'':'s') + '.</p></div>' +
+    '<div class="panel"><h3>📰 Updates from the creator</h3><div id="updates-list">' +
+      (updates.length ? updates.map(function(u){
+        return '<div class="update-item"><span class="uver">v' + esc(u.version) + '</span> <span class="muted">' + fmtDate(u.ts) + '</span><p style="font-size:14px; margin-top:2px;">' + esc(u.text) + '</p></div>';
+      }).join('') : '<p class="muted">No updates yet.</p>') +
+      '</div>' +
+      '<form onsubmit="return handleUpdate(event)" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">' +
+        '<div class="field"><label for="u-version">New version number</label><input type="text" id="u-version" required maxlength="10" placeholder="e.g. 1.4"></div>' +
+        '<div class="field"><label for="u-text">What\'s new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
+        '<button type="submit" class="btn">Post update</button></form></div>' +
+    '<div class="panel"><h3>💬 Comments (' + comments.length + ')</h3>' +
+      '<p class="muted" style="margin-bottom:8px;">Comments may be reviewed by your teacher.</p><div id="comments-list">' +
+      (comments.length ? comments.map(function(c){
+        return '<div class="comment"><span class="cname">' + esc(c.name) + '</span><span class="cdate">' + fmtDate(c.ts) + '</span><p>' + esc(c.text) + '</p></div>';
+      }).join('') : '<p class="muted">No comments yet — be the first!</p>') +
+      '</div>' +
+      '<form onsubmit="return handleComment(event)" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">' +
+        '<div class="field"><label for="c-name">Your name (first name + last initial)</label><input type="text" id="c-name" required maxlength="40"></div>' +
+        '<div class="field"><label for="c-text">Your comment</label><textarea id="c-text" required maxlength="500"></textarea>' +
+        '<p class="muted" style="margin-top:4px;">Class rule: be specific with praise, and add one suggestion.</p></div>' +
+        '<button type="submit" class="btn">Post comment</button></form></div>';
+  paintStars(0);
+}
+function paintStars(n){
+  var g = findGame(currentGameId); if(!g) return;
+  var avg = Math.round(avgOf(ratingsFor(g)));
+  var lit = n || avg;
+  var btns = document.querySelectorAll('#rate-stars button');
+  btns.forEach(function(b){ b.classList.toggle('lit', Number(b.getAttribute('data-n')) <= lit); });
+}
+function addRating(n){
+  var all = store.get('ca_ratings', {});
+  if(!all[currentGameId]) all[currentGameId] = [];
+  all[currentGameId].push(n);
+  store.set('ca_ratings', all);
+  renderDetail();
+  var msg = document.getElementById('rate-msg');
+  if(msg) msg.innerHTML = 'Thanks for rating! You gave it ' + n + ' star' + (n===1?'':'s') + '. ' + msg.textContent;
+}
+function handleComment(ev){
+  ev.preventDefault();
+  var name = document.getElementById('c-name').value.trim();
+  var text = document.getElementById('c-text').value.trim();
+  if(!name || !text) return false;
+  var all = store.get('ca_comments', {});
+  if(!all[currentGameId]) all[currentGameId] = [];
+  all[currentGameId].push({name:name, text:text, ts:Date.now()});
+  store.set('ca_comments', all);
+  renderDetail();
+  return false;
+}
+function handleUpdate(ev){
+  ev.preventDefault();
+  var ver = document.getElementById('u-version').value.trim();
+  var text = document.getElementById('u-text').value.trim();
+  if(!ver || !text) return false;
+  var all = store.get('ca_updates', {});
+  if(!all[currentGameId]) all[currentGameId] = [];
+  all[currentGameId].unshift({version:ver, text:text, ts:Date.now()});
+  store.set('ca_updates', all);
+  renderDetail();
+  return false;
+}
+
+/* ============ player ============ */
+function startGame(){
+  var g = findGame(currentGameId); if(!g) return;
+  stopPlayer();
+  var p = document.getElementById('player');
+  if(g.type === 'custom'){
+    p.innerHTML = '<div class="player-box"><p class="muted" style="margin-bottom:10px;">▶ Now playing: ' + esc(g.title) + ' (submitted game)</p></div>';
+    var frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.style.width = '100%'; frame.style.height = '480px';
+    frame.style.border = '1px solid var(--border)'; frame.style.borderRadius = '8px'; frame.style.background = '#fff';
+    frame.srcdoc = g.code || '<p>No code was included with this game.</p>';
+    p.querySelector('.player-box').appendChild(frame);
+    return;
+  }
+  if(g.gameKey === 'snake') launchSnake(p);
+  else if(g.gameKey === 'coin') launchCoin(p);
+  else if(g.gameKey === 'dragon') launchDragon(p);
+}
+</script>
+<script>
+/* ============ GAME 1: Neon Snake ============ */
+function launchSnake(container){
+  container.innerHTML = '<div class="player-box">' +
+    '<div class="score-line">Score: <span id="sn-score">0</span> &nbsp;·&nbsp; Length: <span id="sn-len">3</span></div>' +
+    '<canvas class="game" id="sn-canvas" width="400" height="400"></canvas>' +
+    '<div class="ctl-row"><button class="btn btn-primary" id="sn-start">▶ Start</button><button class="btn" id="sn-reset">↺ Restart</button></div>' +
+    '<div class="ctl-row"><button class="ctl-btn" data-d="up">⬆</button></div>' +
+    '<div class="ctl-row"><button class="ctl-btn" data-d="left">⬅</button><button class="ctl-btn" data-d="down">⬇</button><button class="ctl-btn" data-d="right">➡</button></div>' +
+    '<p class="muted" style="margin-top:8px;">Arrow keys work too. Don\'t hit the wall or yourself!</p></div>';
+  var cv = document.getElementById('sn-canvas'), ctx = cv.getContext('2d');
+  var CELL = 20, N = 20;
+  var snake, dir, nextDir, food, score, timer = null, speed, dead = false;
+  function reset(){
+    snake = [{x:9,y:10},{x:8,y:10},{x:7,y:10}];
+    dir = {x:1,y:0}; nextDir = dir; score = 0; speed = 150; dead = false;
+    placeFood(); draw(); updateHud();
+  }
+  function placeFood(){
+    do { food = {x:Math.floor(Math.random()*N), y:Math.floor(Math.random()*N)}; }
+    while (snake.some(function(s){ return s.x===food.x && s.y===food.y; }));
+  }
+  function updateHud(){
+    document.getElementById('sn-score').textContent = score;
+    document.getElementById('sn-len').textContent = snake.length;
+  }
+  function draw(){
+    ctx.fillStyle = '#020617'; ctx.fillRect(0,0,400,400);
+    ctx.strokeStyle = 'rgba(74,222,128,0.08)';
+    for(var i=0;i<=N;i++){ ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,400); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(400,i*CELL); ctx.stroke(); }
+    ctx.fillStyle = '#f5c542'; ctx.shadowColor = '#f5c542'; ctx.shadowBlur = 12;
+    ctx.fillRect(food.x*CELL+3, food.y*CELL+3, CELL-6, CELL-6);
+    ctx.shadowBlur = 0;
+    snake.forEach(function(s, i){
+      ctx.fillStyle = i===0 ? '#4ade80' : '#22c55e';
+      ctx.shadowColor = '#4ade80'; ctx.shadowBlur = i===0 ? 10 : 0;
+      ctx.fillRect(s.x*CELL+1, s.y*CELL+1, CELL-2, CELL-2);
+    });
+    ctx.shadowBlur = 0;
+  }
+  function step(){
+    dir = nextDir;
+    var head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+    if(head.x < 0 || head.y < 0 || head.x >= N || head.y >= N ||
+       snake.some(function(s){ return s.x===head.x && s.y===head.y; })){
+      stop(); dead = true; draw();
+      ctx.fillStyle = 'rgba(2,6,23,0.75)'; ctx.fillRect(0,0,400,400);
+      ctx.fillStyle = '#f87171'; ctx.font = 'bold 30px Verdana'; ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', 200, 185);
+      ctx.fillStyle = '#e8edf7'; ctx.font = '17px Verdana';
+      ctx.fillText('Score: ' + score + ' — press Start to play again', 200, 220);
+      return;
+    }
+    snake.unshift(head);
+    if(head.x === food.x && head.y === food.y){
+      score += 10; placeFood();
+      if(speed > 70){ speed -= 5; restartTimer(); }
+    } else { snake.pop(); }
+    draw(); updateHud();
+  }
+  function restartTimer(){ if(timer){ clearInterval(timer); timer = setInterval(step, speed); } }
+  function start(){ if(timer) return; if(dead || !snake || snake.length === 0) reset(); timer = setInterval(step, speed); }
+  function stop(){ if(timer){ clearInterval(timer); timer = null; } }
+  function setDir(d){
+    if(d==='up' && dir.y !== 1) nextDir = {x:0,y:-1};
+    if(d==='down' && dir.y !== -1) nextDir = {x:0,y:1};
+    if(d==='left' && dir.x !== 1) nextDir = {x:-1,y:0};
+    if(d==='right' && dir.x !== -1) nextDir = {x:1,y:0};
+  }
+  function onKey(e){
+    var map = {ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right'};
+    if(map[e.key]){ e.preventDefault(); setDir(map[e.key]); if(!timer) start(); }
+  }
+  document.addEventListener('keydown', onKey);
+  container.querySelectorAll('.ctl-btn').forEach(function(b){
+    b.addEventListener('click', function(){ setDir(b.getAttribute('data-d')); if(!timer) start(); });
+  });
+  document.getElementById('sn-start').addEventListener('click', start);
+  document.getElementById('sn-reset').addEventListener('click', function(){ stop(); reset(); start(); });
+  reset();
+  playerCleanup = function(){ stop(); document.removeEventListener('keydown', onKey); };
+}
+
+/* ============ GAME 2: Coin Catch ============ */
+function launchCoin(container){
+  container.innerHTML = '<div class="player-box">' +
+    '<div class="score-line">Score: <span id="cc-score">0</span> &nbsp;·&nbsp; Time: <span id="cc-time">30</span>s</div>' +
+    '<canvas class="game" id="cc-canvas" width="480" height="320"></canvas>' +
+    '<div class="ctl-row"><button class="btn btn-primary" id="cc-start">▶ Start</button></div>' +
+    '<p class="muted" style="margin-top:8px;">Move with your mouse or the ◀ ▶ arrow keys. Regular coins = 1 point, gold coins = 5 points.</p></div>';
+  var cv = document.getElementById('cc-canvas'), ctx = cv.getContext('2d');
+  var W = 480, H = 320, paddle = {x: W/2 - 40, w: 80, h: 14};
+  var coins = [], score = 0, running = false, raf = null, startTime = 0, lastSpawn = 0, keys = {};
+  function drawScene(msg){
+    ctx.fillStyle = '#020617'; ctx.fillRect(0,0,W,H);
+    coins.forEach(function(c){
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
+      ctx.fillStyle = c.gold ? '#f5c542' : '#facc15'; ctx.fill();
+      ctx.strokeStyle = c.gold ? '#b45309' : '#a16207'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#713f12'; ctx.font = 'bold ' + (c.r) + 'px Verdana'; ctx.textAlign = 'center';
+      ctx.fillText(c.gold ? '5' : '1', c.x, c.y + c.r/3);
+    });
+    ctx.fillStyle = '#4ade80'; ctx.fillRect(paddle.x, H - 26, paddle.w, paddle.h);
+    ctx.fillStyle = '#16a34a'; ctx.fillRect(paddle.x, H - 26, paddle.w, 4);
+    if(msg){
+      ctx.fillStyle = 'rgba(2,6,23,0.72)'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#e8edf7'; ctx.font = 'bold 24px Verdana'; ctx.textAlign = 'center';
+      ctx.fillText(msg, W/2, H/2 - 8);
+      ctx.font = '15px Verdana'; ctx.fillStyle = '#9aa7c2';
+      ctx.fillText('Press Start to play', W/2, H/2 + 22);
+    }
+  }
+  function loop(t){
+    if(!running) return;
+    var elapsed = (t - startTime) / 1000;
+    var left = Math.max(0, 30 - Math.floor(elapsed));
+    document.getElementById('cc-time').textContent = left;
+    if(elapsed >= 30){
+      running = false;
+      drawScene('Time\'s up! Final score: ' + score);
+      return;
+    }
+    if(keys.ArrowLeft) paddle.x = Math.max(0, paddle.x - 6);
+    if(keys.ArrowRight) paddle.x = Math.min(W - paddle.w, paddle.x + 6);
+    if(t - lastSpawn > 550){
+      lastSpawn = t;
+      var gold = Math.random() < 0.18;
+      coins.push({x: 20 + Math.random()*(W-40), y: -14, r: gold ? 13 : 11, vy: gold ? 3.4 : 2.2, gold: gold});
+    }
+    coins = coins.filter(function(c){
+      c.y += c.vy;
+      if(c.y + c.r >= H - 26 && c.y < H - 8 && c.x > paddle.x - c.r && c.x < paddle.x + paddle.w + c.r){
+        score += c.gold ? 5 : 1;
+        document.getElementById('cc-score').textContent = score;
+        return false;
+      }
+      return c.y - c.r < H;
+    });
+    drawScene(null);
+    raf = requestAnimationFrame(loop);
+  }
+  function onMouse(e){
+    var rect = cv.getBoundingClientRect();
+    var x = (e.clientX - rect.left) * (W / rect.width);
+    paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w/2));
+  }
+  function onKeyDown(e){ if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ keys[e.key] = true; e.preventDefault(); } }
+  function onKeyUp(e){ keys[e.key] = false; }
+  cv.addEventListener('mousemove', onMouse);
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+  document.getElementById('cc-start').addEventListener('click', function(){
+    if(raf) cancelAnimationFrame(raf);
+    coins = []; score = 0; paddle.x = W/2 - 40;
+    document.getElementById('cc-score').textContent = '0';
+    document.getElementById('cc-time').textContent = '30';
+    running = true; startTime = performance.now(); lastSpawn = 0;
+    raf = requestAnimationFrame(loop);
+  });
+  drawScene('Catch the falling coins!');
+  playerCleanup = function(){
+    running = false; if(raf) cancelAnimationFrame(raf);
+    cv.removeEventListener('mousemove', onMouse);
+    document.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('keyup', onKeyUp);
+  };
+}
+
+/* ============ GAME 3: Dragon Clicker ============ */
+function launchDragon(container){
+  container.innerHTML = '<div class="player-box">' +
+    '<div class="score-line">🪙 <span id="dc-coins">0</span> coins &nbsp;·&nbsp; per click: <span id="dc-per">1</span> &nbsp;·&nbsp; auto/sec: <span id="dc-auto">0</span></div>' +
+    '<button class="dragon-btn" id="dc-dragon" title="Click the dragon!">🐉</button>' +
+    '<p class="muted">Click the dragon to earn coins!</p>' +
+    '<div class="shop-row">' +
+      '<button class="btn" id="dc-buy-auto">🤖 Buy Auto-Clicker (<span id="dc-cost-auto">50</span> coins)</button>' +
+      '<button class="btn" id="dc-buy-mult">✖️ Buy Multiplier (<span id="dc-cost-mult">100</span> coins)</button>' +
+    '</div>' +
+    '<p class="muted" id="dc-msg" style="margin-top:10px; min-height:18px;"></p></div>';
+  var coins = 0, perClick = 1, autos = 0, mult = 1;
+  function costAuto(){ return 50 * (autos + 1); }
+  function costMult(){ return 100 * mult; }
+  function hud(){
+    document.getElementById('dc-coins').textContent = coins;
+    document.getElementById('dc-per').textContent = perClick;
+    document.getElementById('dc-auto').textContent = autos * perClick;
+    document.getElementById('dc-cost-auto').textContent = costAuto();
+    document.getElementById('dc-cost-mult').textContent = costMult();
+  }
+  function msg(t){ document.getElementById('dc-msg').textContent = t; }
+  document.getElementById('dc-dragon').addEventListener('click', function(){ coins += perClick; hud(); });
+  document.getElementById('dc-buy-auto').addEventListener('click', function(){
+    if(coins >= costAuto()){ coins -= costAuto(); autos++; msg('Auto-Clicker bought! You now have ' + autos + '.'); }
+    else msg('Not enough coins for an Auto-Clicker yet — keep clicking!');
+    hud();
+  });
+  document.getElementById('dc-buy-mult').addEventListener('click', function(){
+    if(coins >= costMult()){ coins -= costMult(); mult++; perClick = mult; msg('Multiplier upgraded! Each click is now worth ' + perClick + '.'); }
+    else msg('Not enough coins for a Multiplier yet — keep clicking!');
+    hud();
+  });
+  var ticker = setInterval(function(){ if(autos > 0){ coins += autos * perClick; hud(); } }, 1000);
+  hud();
+  playerCleanup = function(){ clearInterval(ticker); };
+}
+</script>
+<script>
+/* ============ submit ============ */
+var lastSubmissionId = null;
+var EMOJIS = ['🎮','🐍','🐉','🚀','🏎️','🧩','👾','🏰','⚔️','🎯','🍕','🤖'];
+function buildEmojiPicker(){
+  document.getElementById('emoji-picker').innerHTML = EMOJIS.map(function(e, i){
+    return '<label><input type="radio" name="s-emoji" value="' + e + '"' + (i===0 ? ' checked' : '') + '>' + e + '</label>';
+  }).join('');
+}
+function pickedEmoji(){
+  var el = document.querySelector('input[name="s-emoji"]:checked');
+  return el ? el.value : '🎮';
+}
+function slugify(t){ return (t || 'game').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'game'; }
+function handleSubmit(ev){
+  ev.preventDefault();
+  var sub = {
+    id: 's' + Date.now().toString(36),
+    title: document.getElementById('s-title').value.trim(),
+    name: document.getElementById('s-name').value.trim(),
+    partner: document.getElementById('s-partner').value.trim(),
+    period: Number(document.getElementById('s-period').value),
+    genre: document.getElementById('s-genre').value,
+    desc: document.getElementById('s-desc').value.trim(),
+    howto: document.getElementById('s-howto').value.trim(),
+    emoji: pickedEmoji(),
+    color: document.getElementById('s-color').value,
+    code: document.getElementById('s-code').value,
+    isUpdate: document.getElementById('s-isupdate').checked,
+    whatsnew: document.getElementById('s-whatsnew').value.trim(),
+    version: document.getElementById('s-version').value.trim() || '1.0',
+    status: 'pending',
+    ts: Date.now()
+  };
+  if(!sub.title || !sub.name || !sub.code.trim()){ alert('Please fill in the title, your name, and your game code.'); return false; }
+  var list = getSubmissions();
+  list.unshift(sub);
+  saveSubmissions(list);
+  lastSubmissionId = sub.id;
+  document.getElementById('submit-success').classList.add('show');
+  document.getElementById('submit-form').reset();
+  document.getElementById('s-version').value = '1.0';
+  document.getElementById('s-color').value = '#2563eb';
+  document.getElementById('whatsnew-wrap').style.display = 'none';
+  buildEmojiPicker();
+  updateReviewBadge();
+  window.scrollTo(0,0);
+  return false;
+}
+function submissionFileText(s){
+  var lines = [
+    '<!-- ============================================',
+    '  CLASS ARCADE SUBMISSION',
+    '  Game title : ' + s.title,
+    '  Creator    : ' + s.name + (s.partner ? ' & ' + s.partner : ''),
+    '  Period     : ' + s.period,
+    '  Genre      : ' + s.genre,
+    '  Version    : ' + s.version + (s.isUpdate ? '  (UPDATE)' : ''),
+    '  Cover      : ' + s.emoji + '  ' + s.color,
+    '  Description: ' + s.desc,
+    '  How to play: ' + s.howto,
+    (s.whatsnew ? '  What\'s new: ' + s.whatsnew : ''),
+    '  Submitted  : ' + new Date(s.ts).toLocaleString(),
+    '============================================= -->',
+    ''
+  ];
+  return lines.join('\n') + (s.code || '');
+}
+function downloadSubmissionById(id){
+  var s = null;
+  getSubmissions().forEach(function(x){ if(x.id === id) s = x; });
+  if(!s) return;
+  var blob = new Blob([submissionFileText(s)], {type:'text/html'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = slugify(s.title) + '-submission.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+}
+function downloadLastSubmission(){ if(lastSubmissionId) downloadSubmissionById(lastSubmissionId); }
+
+/* ============ teacher review ============ */
+function updateReviewBadge(){
+  var n = getSubmissions().filter(function(s){ return s.status === 'pending'; }).length;
+  document.getElementById('review-badge').innerHTML = n ? '<span class="badge">' + n + '</span>' : '';
+}
+function renderReview(){
+  updateReviewBadge();
+  var list = getSubmissions();
+  var box = document.getElementById('review-list');
+  if(!list.length){
+    box.innerHTML = '<div class="panel"><p class="muted">No submissions yet. When a student submits a game on this computer, it will show up here for review.</p></div>';
+    return;
+  }
+  box.innerHTML = list.map(function(s){
+    var btns = '';
+    if(s.status === 'pending'){
+      btns = '<button class="btn btn-primary" onclick="setSubmissionStatus(\'' + s.id + '\',\'approved\')">✔ Approve — add to library</button> ' +
+             '<button class="btn btn-danger" onclick="setSubmissionStatus(\'' + s.id + '\',\'rejected\')">✖ Reject</button> ';
+    } else if(s.status === 'approved'){
+      btns = '<button class="btn" onclick="openGame(\'sub-' + s.id + '\')">▶ View in library</button> ';
+    }
+    btns += '<button class="btn" onclick="downloadSubmissionById(\'' + s.id + '\')">⬇ Download file</button>';
+    return '<div class="review-card">' +
+      '<div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">' +
+        '<div style="width:64px; height:64px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:36px; background:' + esc(s.color) + ';">' + esc(s.emoji) + '</div>' +
+        '<div style="flex:1; min-width:220px;">' +
+          '<h3 style="font-size:18px;">' + esc(s.title) + '<span class="status ' + esc(s.status) + '">' + esc(s.status.toUpperCase()) + '</span></h3>' +
+          '<p class="muted">by ' + esc(s.name) + (s.partner ? ' &amp; ' + esc(s.partner) : '') + ' · Period ' + esc(s.period) + ' · ' + esc(s.genre) + ' · v' + esc(s.version) + (s.isUpdate ? ' · UPDATE' : '') + ' · ' + fmtDate(s.ts) + '</p>' +
+          '<p style="font-size:14px; margin:6px 0;">' + esc(s.desc) + '</p>' +
+          (s.whatsnew ? '<p style="font-size:13.5px; color:var(--gold);">What\'s new: ' + esc(s.whatsnew) + '</p>' : '') +
+          '<div style="margin-top:10px;">' + btns + '</div>' +
+        '</div></div></div>';
+  }).join('');
+}
+function setSubmissionStatus(id, status){
+  var list = getSubmissions();
+  list.forEach(function(s){ if(s.id === id) s.status = status; });
+  saveSubmissions(list);
+  renderReview();
+  renderLibrary();
+}
+
+/* ============ init ============ */
+buildEmojiPicker();
+updateReviewBadge();
+renderLibrary();
+</script>
+</body>
+</html>
