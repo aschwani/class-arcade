@@ -145,10 +145,10 @@
   <!-- SUBMIT VIEW -->
   <section id="view-submit" class="view">
     <h2 style="margin-bottom:6px;">Submit Your Game</h2>
-    <p class="muted" style="margin-bottom:16px;">Fill this out to hand in your game. When you submit, you'll get a file to download and turn in — and your game will wait in Teacher Review until your teacher approves it.</p>
+    <p class="muted" style="margin-bottom:16px;">Fill this out to hand in your game. Your game goes to Teacher Review, and once your teacher approves it, it shows up in the library on every computer. You can also download a submission file to turn in.</p>
     <div class="success" id="submit-success">
       <h3 style="color:var(--green); margin-bottom:6px;">✅ Your submission is ready!</h3>
-      <p style="font-size:14px; margin-bottom:12px;">Download your submission file and hand it in to your teacher. Your game is also saved in Teacher Review on this computer.</p>
+      <p style="font-size:14px; margin-bottom:12px;">Your game was sent to Teacher Review — once your teacher approves it, it will appear in the library on every computer. You can also download your submission file to hand in.</p>
       <button class="btn btn-primary" id="download-sub-btn" onclick="downloadLastSubmission()">⬇ Download submission file</button>
     </div>
     <div class="panel">
@@ -187,13 +187,13 @@
   <!-- TEACHER REVIEW VIEW -->
   <section id="view-review" class="view">
     <h2 style="margin-bottom:6px;">Teacher Review</h2>
-    <p class="muted" style="margin-bottom:16px;">Games submitted on this computer wait here. Approve a game to add it to the library, or reject it. (On the class site, submissions arrive as downloaded files — this queue is the on-this-computer demo of that step.)</p>
+    <p class="muted" style="margin-bottom:16px;">Games students submit wait here. Approve a game to publish it to the library on every computer, or reject it.</p>
     <div id="pending-comments" style="margin-bottom:18px;"></div>
     <div id="review-list"></div>
   </section>
 </main>
 
-<footer>Class Arcade — CS Basics. Demo games are examples. Ratings and comments sync live across devices when the header status says "Live"; submissions are saved in this browser on this computer.</footer>
+<footer>Class Arcade — CS Basics. Demo games are examples. Ratings, comments, and approved games sync live across devices when the header status says "Live"; on a device that can't reach the database, submissions are saved in that browser instead.</footer>
 <script>
 /* ============ helpers & storage ============ */
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
@@ -212,7 +212,7 @@ function starString(avg, count){
 
 /* ============ live sync state (Firebase Realtime Database, REST API) ============ */
 var DB_URL = 'https://class-arcade-default-rtdb.firebaseio.com';
-var liveState = { enabled:false, online:false, ratings:{}, comments:{}, streams:{} };
+var liveState = { enabled:false, online:false, ratings:{}, comments:{}, games:{}, streams:{} };
 /* Stable database ID for a game: seeded games use their internal ID;
    approved student games use a slug of the title + their submission ID. */
 function dbIdFor(game){
@@ -233,7 +233,7 @@ function dbRequest(path, opts){
 var SEED_GAMES = [
   { id:'neon-snake', type:'builtin', gameKey:'snake', title:'Neon Snake', creator:'Demo Game', partner:'',
     period:1, genre:'Action', version:'1.2', emoji:'🐍', color:'#14532d',
-    desc:'The classic snake game with a neon twist. Eat the glowing orbs to grow — just don\'t bite yourself or hit the wall!',
+    desc:'The classic snake game with a neon twist. Eat the glowing orbs to grow — just don't bite yourself or hit the wall!',
     howto:'Use the arrow keys (or the on-screen buttons) to steer the snake. Eat food to grow longer and score. The game speeds up as you grow. Press Start to play.',
     seedRatings:[5,5,4,5,4],
     seedComments:[
@@ -276,16 +276,46 @@ var SEED_GAMES = [
 /* ============ game collection ============ */
 function getSubmissions(){ return store.get('ca_submissions', []); }
 function saveSubmissions(list){ store.set('ca_submissions', list); }
+/* Share a submission through the database so Teacher Review on any computer
+   can see it, and approving it publishes it to every computer. Fire-and-forget:
+   the local copy stays as the fallback, and local submissions that are not in
+   the database yet are pushed again on page load (see syncLocalSubmissions). */
+function pushSubmissionToDb(s){
+  if(!liveState.enabled) return;
+  var rec = {};
+  for(var k in s) rec[k] = s[k];
+  dbRequest('/games/' + encodeURIComponent(s.id) + '.json', {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(rec)
+  }).then(function(){ liveState.games[s.id] = rec; }, function(){});
+}
+/* Every submission this device knows about: ones saved in this browser plus
+   ones shared through the database, keyed by submission id. The database copy
+   wins when both exist — it carries the latest review status. */
+function allSubmissions(){
+  var byId = {};
+  getSubmissions().forEach(function(s){ byId[s.id] = s; });
+  if(liveState.enabled){
+    for(var k in liveState.games){
+      var g = liveState.games[k];
+      if(g && g.title) byId[g.id || k] = g;
+    }
+  }
+  var out = [];
+  for(var id in byId) out.push(byId[id]);
+  out.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+  return out;
+}
+function gameFromSub(s){
+  return { id:'sub-' + s.id, type:'custom', code:s.code, title:s.title, creator:s.name,
+    partner:s.partner || '', period:s.period, genre:s.genre, version:s.version || '1.0',
+    emoji:s.emoji, color:s.color, coverImg:s.coverImg || '', desc:s.desc, howto:s.howto,
+    seedRatings:[], seedComments:[],
+    seedUpdates: s.whatsnew ? [{version:s.version || '1.0', text:s.whatsnew, ts:s.ts}] : [{version:s.version || '1.0', text:'First release!', ts:s.ts}] };
+}
 function getGames(){
   var games = SEED_GAMES.slice();
-  getSubmissions().forEach(function(s){
-    if(s.status === 'approved'){
-      games.push({ id:'sub-' + s.id, type:'custom', code:s.code, title:s.title, creator:s.name,
-        partner:s.partner || '', period:s.period, genre:s.genre, version:s.version || '1.0',
-        emoji:s.emoji, color:s.color, coverImg:s.coverImg || '', desc:s.desc, howto:s.howto,
-        seedRatings:[], seedComments:[],
-        seedUpdates: s.whatsnew ? [{version:s.version || '1.0', text:s.whatsnew, ts:s.ts}] : [{version:s.version || '1.0', text:'First release!', ts:s.ts}] });
-    }
+  allSubmissions().forEach(function(s){
+    if(s.status === 'approved') games.push(gameFromSub(s));
   });
   return games;
 }
@@ -427,7 +457,7 @@ function renderLibrary(){
         '<p class="muted" style="margin-bottom:6px;">by ' + esc(f.creator) + ' · Period ' + esc(f.period) + ' · v' + esc(f.version) + '</p>' +
         '<p style="font-size:14.5px; margin-bottom:9px;">' + esc(f.desc) + '</p>' +
         starString(avgOf(fr), fr.length) + '<br>' +
-        '<button class="btn btn-primary" style="margin-top:10px;" onclick="openGame(\'' + f.id + '\')">▶ Play ' + esc(f.title) + '</button>' +
+        '<button class="btn btn-primary" style="margin-top:10px;" onclick="openGame('' + f.id + '')">▶ Play ' + esc(f.title) + '</button>' +
       '</div></div>';
 
   // filtering
@@ -443,7 +473,7 @@ function renderLibrary(){
   document.getElementById('no-results').style.display = shown.length ? 'none' : 'block';
   document.getElementById('game-grid').innerHTML = shown.map(function(g){
     var r = ratingsFor(g);
-    return '<div class="card" onclick="openGame(\'' + g.id + '\')">' +
+    return '<div class="card" onclick="openGame('' + g.id + '')">' +
       '<div class="card-cover" style="background:' + esc(g.color) + ';">' + coverHtml(g) + '</div>' +
       '<div class="card-body"><h3>' + esc(g.title) + '</h3>' +
       '<div class="byline">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + ' · Period ' + esc(g.period) + '</div>' +
@@ -501,7 +531,7 @@ function renderDetail(){
       '</div>' +
       '<form onsubmit="return handleUpdate(event)" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">' +
         '<div class="field"><label for="u-version">New version number</label><input type="text" id="u-version" required maxlength="10" placeholder="e.g. 1.4"></div>' +
-        '<div class="field"><label for="u-text">What\'s new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
+        '<div class="field"><label for="u-text">What's new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
         '<button type="submit" class="btn">Post update</button></form></div>' +
     '<div class="panel"><h3 id="comments-title">💬 Comments (' + comments.length + ')</h3>' +
       '<p class="muted" style="margin-bottom:8px;">Comments may be reviewed by your teacher.</p><div id="comments-list">' +
@@ -660,7 +690,7 @@ function launchSnake(container){
     '<div class="ctl-row"><button class="btn btn-primary" id="sn-start">▶ Start</button><button class="btn" id="sn-reset">↺ Restart</button></div>' +
     '<div class="ctl-row"><button class="ctl-btn" data-d="up">⬆</button></div>' +
     '<div class="ctl-row"><button class="ctl-btn" data-d="left">⬅</button><button class="ctl-btn" data-d="down">⬇</button><button class="ctl-btn" data-d="right">➡</button></div>' +
-    '<p class="muted" style="margin-top:8px;">Arrow keys work too. Don\'t hit the wall or yourself!</p></div>';
+    '<p class="muted" style="margin-top:8px;">Arrow keys work too. Don't hit the wall or yourself!</p></div>';
   var cv = document.getElementById('sn-canvas'), ctx = cv.getContext('2d');
   var CELL = 20, N = 20;
   var snake, dir, nextDir, food, score, timer = null, speed, dead = false;
@@ -770,7 +800,7 @@ function launchCoin(container){
     document.getElementById('cc-time').textContent = left;
     if(elapsed >= 30){
       running = false;
-      drawScene('Time\'s up! Final score: ' + score);
+      drawScene('Time's up! Final score: ' + score);
       return;
     }
     if(keys.ArrowLeft) paddle.x = Math.max(0, paddle.x - 6);
@@ -888,7 +918,7 @@ function previewCoverImage(ev){
       var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
       pendingCoverImg = cv.toDataURL('image/jpeg', 0.85);
-      pv.innerHTML = '<img src="' + pendingCoverImg + '" style="max-width:230px; max-height:150px; border-radius:10px; border:1px solid var(--border);" alt="Cover preview"><p class="muted" style="margin-top:4px;">That\'s your cover ✓ — it replaces the emoji.</p>';
+      pv.innerHTML = '<img src="' + pendingCoverImg + '" style="max-width:230px; max-height:150px; border-radius:10px; border:1px solid var(--border);" alt="Cover preview"><p class="muted" style="margin-top:4px;">That's your cover ✓ — it replaces the emoji.</p>';
     };
     img.src = rd.result;
   };
@@ -919,6 +949,7 @@ function handleSubmit(ev){
   var list = getSubmissions();
   list.unshift(sub);
   saveSubmissions(list);
+  pushSubmissionToDb(sub);
   lastSubmissionId = sub.id;
   document.getElementById('submit-success').classList.add('show');
   document.getElementById('submit-form').reset();
@@ -945,16 +976,17 @@ function submissionFileText(s){
     (s.coverImg ? '  Cover image (data): ' + s.coverImg : ''),
     '  Description: ' + s.desc,
     '  How to play: ' + s.howto,
-    (s.whatsnew ? '  What\'s new: ' + s.whatsnew : ''),
+    (s.whatsnew ? '  What's new: ' + s.whatsnew : ''),
     '  Submitted  : ' + new Date(s.ts).toLocaleString(),
     '============================================= -->',
     ''
   ];
-  return lines.join('\n') + (s.code || '');
+  return lines.join('
+') + (s.code || '');
 }
 function downloadSubmissionById(id){
   var s = null;
-  getSubmissions().forEach(function(x){ if(x.id === id) s = x; });
+  allSubmissions().forEach(function(x){ if(x.id === id) s = x; });
   if(!s) return;
   var blob = new Blob([submissionFileText(s)], {type:'text/html'});
   var url = URL.createObjectURL(blob);
@@ -970,26 +1002,26 @@ function downloadLastSubmission(){ if(lastSubmissionId) downloadSubmissionById(l
 
 /* ============ teacher review ============ */
 function updateReviewBadge(){
-  var n = getSubmissions().filter(function(s){ return s.status === 'pending'; }).length;
+  var n = allSubmissions().filter(function(s){ return s.status === 'pending'; }).length;
   document.getElementById('review-badge').innerHTML = n ? '<span class="badge">' + n + '</span>' : '';
 }
 function renderReview(){
   updateReviewBadge();
-  var list = getSubmissions();
+  var list = allSubmissions();
   var box = document.getElementById('review-list');
   if(!list.length){
-    box.innerHTML = '<div class="panel"><p class="muted">No submissions yet. When a student submits a game on this computer, it will show up here for review.</p></div>';
+    box.innerHTML = '<div class="panel"><p class="muted">No submissions yet. When a student submits a game, it will show up here for review.</p></div>';
     return;
   }
   box.innerHTML = list.map(function(s){
     var btns = '';
     if(s.status === 'pending'){
-      btns = '<button class="btn btn-primary" onclick="setSubmissionStatus(\'' + s.id + '\',\'approved\')">✔ Approve — add to library</button> ' +
-             '<button class="btn btn-danger" onclick="setSubmissionStatus(\'' + s.id + '\',\'rejected\')">✖ Reject</button> ';
+      btns = '<button class="btn btn-primary" onclick="setSubmissionStatus('' + s.id + '','approved')">✔ Approve — add to library</button> ' +
+             '<button class="btn btn-danger" onclick="setSubmissionStatus('' + s.id + '','rejected')">✖ Reject</button> ';
     } else if(s.status === 'approved'){
-      btns = '<button class="btn" onclick="openGame(\'sub-' + s.id + '\')">▶ View in library</button> ';
+      btns = '<button class="btn" onclick="openGame('sub-' + s.id + '')">▶ View in library</button> ';
     }
-    btns += '<button class="btn" onclick="downloadSubmissionById(\'' + s.id + '\')">⬇ Download file</button>';
+    btns += '<button class="btn" onclick="downloadSubmissionById('' + s.id + '')">⬇ Download file</button>';
     return '<div class="review-card">' +
       '<div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">' +
         '<div class="review-thumb" style="width:64px; height:64px; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:36px; background:' + esc(s.color) + ';">' + coverHtml(s) + '</div>' +
@@ -997,7 +1029,7 @@ function renderReview(){
           '<h3 style="font-size:18px;">' + esc(s.title) + '<span class="status ' + esc(s.status) + '">' + esc(s.status.toUpperCase()) + '</span></h3>' +
           '<p class="muted">by ' + esc(s.name) + (s.partner ? ' &amp; ' + esc(s.partner) : '') + ' · Period ' + esc(s.period) + ' · ' + esc(s.genre) + ' · v' + esc(s.version) + (s.isUpdate ? ' · UPDATE' : '') + ' · ' + fmtDate(s.ts) + '</p>' +
           '<p style="font-size:14px; margin:6px 0;">' + esc(s.desc) + '</p>' +
-          (s.whatsnew ? '<p style="font-size:13.5px; color:var(--gold);">What\'s new: ' + esc(s.whatsnew) + '</p>' : '') +
+          (s.whatsnew ? '<p style="font-size:13.5px; color:var(--gold);">What's new: ' + esc(s.whatsnew) + '</p>' : '') +
           '<div style="margin-top:10px;">' + btns + '</div>' +
         '</div></div></div>';
   }).join('');
@@ -1007,6 +1039,14 @@ function setSubmissionStatus(id, status){
   var list = getSubmissions();
   list.forEach(function(s){ if(s.id === id) s.status = status; });
   saveSubmissions(list);
+  if(liveState.enabled){
+    /* Publish the decision to the database: approving puts the game in the
+       library on every computer; rejecting keeps it out everywhere. */
+    if(liveState.games[id]) liveState.games[id].status = status;
+    var rec = null;
+    allSubmissions().forEach(function(s){ if(s.id === id) rec = s; });
+    if(rec) pushSubmissionToDb(rec);
+  }
   renderReview();
   renderLibrary();
 }
@@ -1034,7 +1074,7 @@ function refreshLiveViews(){
   if(!active) return;
   if(active.id === 'view-library') renderLibrary();
   else if(active.id === 'view-detail') refreshDetailLive();
-  else if(active.id === 'view-review') renderPendingComments();
+  else if(active.id === 'view-review') renderReview();
 }
 function refreshDetailLive(){
   var g = findGame(currentGameId);
@@ -1084,6 +1124,7 @@ function startPolling(){
   setInterval(function(){
     dbRequest('/ratings.json').then(function(d){ liveState.ratings = d || {}; liveState.online = true; refreshLiveViews(); }, function(){ liveState.online = false; updateSyncIndicator(); });
     dbRequest('/comments.json').then(function(d){ liveState.comments = d || {}; liveState.online = true; refreshLiveViews(); }, function(){ liveState.online = false; updateSyncIndicator(); });
+    dbRequest('/games.json').then(function(d){ liveState.games = d || {}; liveState.online = true; refreshLiveViews(); }, function(){ liveState.online = false; updateSyncIndicator(); });
   }, 15000);
 }
 function startStream(kind){
@@ -1106,23 +1147,35 @@ function startStream(kind){
   es.addEventListener('patch', onEvent('patch'));
   es.onerror = function(){ if(es.readyState === EventSource.CLOSED) startPolling(); };
 }
+/* Push any submissions saved in this browser that the database does not
+   have yet — e.g. a game submitted before game sync existed, or while the
+   database was unreachable. Runs once when live sync connects. */
+function syncLocalSubmissions(){
+  if(!liveState.enabled) return;
+  getSubmissions().forEach(function(s){
+    if(!liveState.games[s.id]) pushSubmissionToDb(s);
+  });
+}
 function initLiveSync(){
   updateSyncIndicator();
   var loaded = 0, failed = false;
   function ok(){
     loaded++;
-    if(loaded === 2 && !failed){
+    if(loaded === 3 && !failed){
       liveState.enabled = true;
       liveState.online = true;
       updateSyncIndicator();
+      syncLocalSubmissions();
       refreshLiveViews();
       startStream('ratings');
       startStream('comments');
+      startStream('games');
     }
   }
   function fail(){ failed = true; liveState.online = false; updateSyncIndicator(); }
   dbRequest('/ratings.json').then(function(d){ liveState.ratings = d || {}; ok(); }, fail);
   dbRequest('/comments.json').then(function(d){ liveState.comments = d || {}; ok(); }, fail);
+  dbRequest('/games.json').then(function(d){ liveState.games = d || {}; ok(); }, fail);
 }
 
 /* ============ pending comment moderation (Teacher Review) ============ */
@@ -1154,8 +1207,8 @@ function renderPendingComments(){
   } else {
     html += list.map(function(c){
       return '<div class="comment"><span class="cname">' + esc(c.name) + '</span><span class="cdate">' + fmtDate(c.ts) + ' · on ' + esc(c.title) + '</span><p>' + esc(c.text) + '</p>' +
-        '<div style="margin-top:7px;"><button class="btn btn-primary" onclick="approveComment(\'' + c.dbId + '\',\'' + c.key + '\')">✔ Approve</button> ' +
-        '<button class="btn btn-danger" onclick="rejectComment(\'' + c.dbId + '\',\'' + c.key + '\')">✖ Reject</button></div></div>';
+        '<div style="margin-top:7px;"><button class="btn btn-primary" onclick="approveComment('' + c.dbId + '','' + c.key + '')">✔ Approve</button> ' +
+        '<button class="btn btn-danger" onclick="rejectComment('' + c.dbId + '','' + c.key + '')">✖ Reject</button></div></div>';
     }).join('');
   }
   html += '</div>';
@@ -1184,7 +1237,7 @@ function rejectComment(dbId, key){
 var _origRenderReview = renderReview;
 renderReview = function(){ _origRenderReview(); renderPendingComments(); };
 updateReviewBadge = function(){
-  var n = getSubmissions().filter(function(s){ return s.status === 'pending'; }).length + allPendingComments().length;
+  var n = allSubmissions().filter(function(s){ return s.status === 'pending'; }).length + allPendingComments().length;
   document.getElementById('review-badge').innerHTML = n ? '<span class="badge">' + n + '</span>' : '';
 };
 updateReviewBadge();
