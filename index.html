@@ -1088,34 +1088,40 @@ function setSubmissionStatus(id, status){
   renderReview();
   renderLibrary();
   if(!liveState.enabled) return;
-  /* Publish the decision so every computer sees it: a small status-only
-     write for a game already in the database, or a full upload for a game
-     that so far only exists on this computer. If the write fails, say so —
-     never let a decision look published when it only saved locally. */
-  var writes = [];
+  /* Publish the decision so every computer sees it. Status writes use PUT
+     to the status child (the same write method student submissions use —
+     PATCH requests from the teacher's computer were being blocked, so
+     approvals silently failed while reads kept working). A game that so
+     far only exists on this computer is uploaded in full. If the writes
+     fail, retry once before saying so — never let a decision look
+     published when it only saved locally. */
+  var writeFns = [];
   if(liveState.games[id]){
-    writes.push(dbRequest('/games/' + encodeURIComponent(id) + '.json', {
-      method:'PATCH', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({status: status})
-    }));
+    writeFns.push(function(){ return dbRequest('/games/' + encodeURIComponent(id) + '/status.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(status)
+    }); });
   } else {
     var rec = null;
     allSubmissions().forEach(function(s){ if(s.id === id) rec = s; });
     if(!rec) return;
-    writes.push(dbRequest('/games/' + encodeURIComponent(id) + '.json', {
+    writeFns.push(function(){ return dbRequest('/games/' + encodeURIComponent(id) + '.json', {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(rec)
-    }));
+    }); });
   }
   retireIds.forEach(function(rid){
     if(liveState.games[rid]){
-      writes.push(dbRequest('/games/' + encodeURIComponent(rid) + '.json', {
-        method:'PATCH', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({status: 'rejected'})
-      }));
+      writeFns.push(function(){ return dbRequest('/games/' + encodeURIComponent(rid) + '/status.json', {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify('rejected')
+      }); });
     }
   });
-  Promise.all(writes).catch(function(){
+  function runWrites(){ return Promise.all(writeFns.map(function(f){ return f(); })); }
+  runWrites().catch(function(){
+    return new Promise(function(res){ setTimeout(res, 1500); }).then(runWrites);
+  }).catch(function(){
     alert('That decision saved on this computer, but it could not be sent to the class database, so other computers will not see it yet. Check that the header says Live, then try again.');
   });
 }
@@ -1287,9 +1293,9 @@ function approveComment(dbId, key){
   if(!reviewUnlocked()){ alert('Teacher Review is locked.'); return; }
   if(liveState.comments[dbId] && liveState.comments[dbId][key]) liveState.comments[dbId][key].status = 'approved';
   refreshLiveViews();
-  dbRequest('/comments/' + encodeURIComponent(dbId) + '/' + encodeURIComponent(key) + '.json', {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({status:'approved'})
+  dbRequest('/comments/' + encodeURIComponent(dbId) + '/' + encodeURIComponent(key) + '/status.json', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify('approved')
   }).catch(function(){ alert('Could not reach the database to approve that comment — it may reappear as pending.'); });
 }
 function rejectComment(dbId, key){
