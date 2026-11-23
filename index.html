@@ -177,7 +177,15 @@
           <div id="s-cover-preview" style="margin-top:8px;"></div></div>
         <div class="field"><label for="s-color">Cover color</label><input type="color" id="s-color" value="#2563eb"></div>
         <div class="field"><label for="s-code">Your game's HTML code *</label>
-          <textarea id="s-code" required style="min-height:150px; font-family:monospace; font-size:12.5px;" placeholder="Paste your whole HTML file here…"></textarea></div>
+          <textarea id="s-code" style="min-height:150px; font-family:monospace; font-size:12.5px;" placeholder="Paste your whole HTML file here…"></textarea>
+          <p class="muted" style="margin-top:5px;">Single-file game? Paste its code above. Multi-file game? Skip this and use the file upload below instead.</p></div>
+        <div class="field"><label>Multi-file game upload</label>
+          <p class="muted" style="margin-bottom:7px;">If your game is more than one file, add ALL of its files — the .html page, every .js and .css file, and any images, sounds, or 3D models it uses (include whole subfolders, like a models folder, with the folder button). Everything gets combined into one file automatically, so the game plays just like it does from its folder. Links to libraries on the web (like a CDN) are left as they are. Big images are shrunk automatically.</p>
+          <div style="display:flex; gap:22px; flex-wrap:wrap; font-size:14px;">
+            <span>Add files: <input type="file" id="s-files" multiple onchange="gameFilesChosen(this)"></span>
+            <span>Add a folder: <input type="file" id="s-folder" webkitdirectory onchange="gameFilesChosen(this)"></span>
+          </div>
+          <div id="s-files-list" style="margin-top:8px;"></div></div>
         <div class="field">
           <label style="font-weight:normal;"><input type="checkbox" id="s-isupdate" onchange="document.getElementById('whatsnew-wrap').style.display = this.checked ? 'block':'none'"> This is an update to a game I already submitted</label>
         </div>
@@ -949,7 +957,23 @@ function handleSubmit(ev){
     status: 'pending',
     ts: Date.now()
   };
-  if(!sub.title || !sub.name || !sub.code.trim()){ alert('Please fill in the title, your name, and your game code.'); return false; }
+  if(!sub.title || !sub.name){ alert('Please fill in the title and your name.'); return false; }
+  if(pendingGameFiles.length){
+    bundleGameFiles().then(function(bundle){
+      sub.code = bundle;
+      sub.multiFile = true;
+      sub.fileNames = pendingGameFiles.map(function(g){ return g.path; });
+      finishSubmit(sub);
+    }, function(err){
+      alert('Those game files could not be combined: ' + (err && err.message ? err.message : err));
+    });
+    return false;
+  }
+  if(!sub.code.trim()){ alert('Please paste your game code, or use the multi-file upload below it.'); return false; }
+  finishSubmit(sub);
+  return false;
+}
+function finishSubmit(sub){
   var list = getSubmissions();
   list.unshift(sub);
   saveSubmissions(list);
@@ -958,6 +982,8 @@ function handleSubmit(ev){
   document.getElementById('submit-success').classList.add('show');
   document.getElementById('submit-form').reset();
   pendingCoverImg = '';
+  pendingGameFiles = [];
+  document.getElementById('s-files-list').innerHTML = '';
   document.getElementById('s-cover-preview').innerHTML = '';
   document.getElementById('s-version').value = '1.0';
   document.getElementById('s-color').value = '#2563eb';
@@ -976,6 +1002,7 @@ function submissionFileText(s){
     '  Period     : ' + s.period,
     '  Genre      : ' + s.genre,
     '  Version    : ' + s.version + (s.isUpdate ? '  (UPDATE)' : ''),
+    (s.multiFile ? '  Files      : ' + (s.fileNames || []).join(', ') : ''),
     '  Cover      : ' + s.emoji + '  ' + s.color,
     (s.coverImg ? '  Cover image (data): ' + s.coverImg : ''),
     '  Description: ' + s.desc,
@@ -1002,6 +1029,145 @@ function downloadSubmissionById(id){
   setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
 }
 function downloadLastSubmission(){ if(lastSubmissionId) downloadSubmissionById(lastSubmissionId); }
+
+/* ============ multi-file game bundling ============ */
+var pendingGameFiles = [];
+function gameFilesChosen(input){
+  var files = input.files || [];
+  for(var i = 0; i < files.length; i++){
+    var f = files[i];
+    var path = f.name;
+    if(f.webkitRelativePath){
+      var parts = f.webkitRelativePath.split('/');
+      path = parts.length > 1 ? parts.slice(1).join('/') : f.name;
+    }
+    var replaced = false;
+    pendingGameFiles = pendingGameFiles.map(function(g){
+      if(g.path === path){ replaced = true; return {path:path, name:f.name, file:f}; }
+      return g;
+    });
+    if(!replaced) pendingGameFiles.push({path:path, name:f.name, file:f});
+  }
+  input.value = '';
+  renderGameFileList();
+}
+function renderGameFileList(){
+  var box = document.getElementById('s-files-list');
+  if(!box) return;
+  if(!pendingGameFiles.length){ box.innerHTML = ''; return; }
+  var total = 0, entry = null;
+  pendingGameFiles.forEach(function(g){
+    total += g.file.size;
+    if(/\.html?$/i.test(g.path) && (!entry || /^index/i.test(g.name))) entry = g;
+  });
+  var html = '<p style="font-size:13.5px;">' + pendingGameFiles.length + ' file' + (pendingGameFiles.length === 1 ? '' : 's') + ' added (' + Math.max(1, Math.round(total / 1024)) + ' KB total)' +
+    (entry ? ' · Main page: <b>' + esc(entry.path) + '</b>' : ' · <span style="color:var(--gold);">No .html page yet — add the game\'s main page file.</span>') +
+    ' <button type="button" class="btn" onclick="clearGameFiles()">Clear</button></p>';
+  html += '<p class="muted">' + pendingGameFiles.map(function(g){ return esc(g.path); }).join(' · ') + '</p>';
+  box.innerHTML = html;
+}
+function clearGameFiles(){ pendingGameFiles = []; renderGameFileList(); }
+function readFileAs(file, mode){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res(r.result); };
+    r.onerror = function(){ rej(new Error('could not read ' + file.name)); };
+    if(mode === 'url') r.readAsDataURL(file); else r.readAsText(file);
+  });
+}
+function shrinkBigImage(file){
+  if(!/^image\//.test(file.type) || file.size <= 1024 * 1024) return readFileAs(file, 'url');
+  return readFileAs(file, 'url').then(function(url){
+    return new Promise(function(res){
+      var img = new Image();
+      img.onload = function(){
+        var scale = Math.min(1, 1600 / Math.max(img.width || 1, img.height || 1));
+        if(scale >= 1){ res(url); return; }
+        var cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * scale));
+        cv.height = Math.max(1, Math.round(img.height * scale));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        res(cv.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function(){ res(url); };
+      img.src = url;
+    });
+  });
+}
+/* Combine a multi-file game into one self-contained HTML string. textByPath
+   holds the text files' contents and assetByPath the binary files' data
+   URLs; entryPath names the main page inside textByPath. Local script and
+   stylesheet tags are inlined, and references to uploaded images, sounds,
+   models, and data files are swapped for data URLs. Pure string work, so
+   the result is the same wherever it runs. */
+function assembleBundle(entryPath, textByPath, assetByPath){
+  var paths = Object.keys(textByPath).concat(Object.keys(assetByPath));
+  function lookup(ref){
+    ref = String(ref || '').split(/[?#]/)[0];
+    try { ref = decodeURIComponent(ref); } catch(e){}
+    if(textByPath[ref] != null || assetByPath[ref] != null) return ref;
+    var base = ref.split('/').pop();
+    for(var i = 0; i < paths.length; i++){ if(paths[i].split('/').pop() === base) return paths[i]; }
+    return null;
+  }
+  function assetUrl(ref){ var p = lookup(ref); return p ? (assetByPath[p] || null) : null; }
+  function replaceAssetStrings(text){
+    return text.replace(/(['"])([^'"]{1,200}?\.(?:png|jpe?g|gif|webp|svg|mp3|wav|ogg|m4a|glb|gltf|bin|json|woff2?|ttf))\1/gi, function(m, q, ref){
+      var u = assetUrl(ref); return u ? q + u + q : m;
+    });
+  }
+  function replaceCssUrls(text){
+    return text.replace(/url\(\s*(['"]?)([^)'"]{1,300})\1\s*\)/gi, function(m, q, ref){
+      if(/^(https?:|data:|\/\/)/i.test(ref)) return m;
+      var u = assetUrl(ref); return u ? 'url("' + u + '")' : m;
+    });
+  }
+  var html = textByPath[entryPath];
+  if(html == null) throw new Error('the main .html page could not be read.');
+  html = html.replace(/<link[^>]*href\s*=\s*(['"])([^'"]+)\1[^>]*>/gi, function(m, q, ref){
+    var p = lookup(ref);
+    if(p && textByPath[p] != null && /\.css$/i.test(p)) return '<style>\n' + textByPath[p] + '\n</style>';
+    return m;
+  });
+  html = html.replace(/<script([^>]*)src\s*=\s*(['"])([^'"]+)\2([^>]*)>\s*<\/script>/gi, function(m, pre, q, ref, post){
+    var p = lookup(ref);
+    if(p && textByPath[p] != null && /\.js$/i.test(p)){
+      var mod = /type\s*=\s*['"]module['"]/i.test(pre + ' ' + post);
+      var code = replaceAssetStrings(textByPath[p]).replace(/<\/script/gi, '<\\/script');
+      return '<script' + (mod ? ' type="module"' : '') + '>\n' + code + '\n<\/script>';
+    }
+    return m;
+  });
+  html = html.replace(/\b(src|href)\s*=\s*(['"])([^'"]{1,300})\2/gi, function(m, attr, q, ref){
+    if(/^(https?:|data:|\/\/|#)/i.test(ref)) return m;
+    var u = assetUrl(ref); return u ? attr + '=' + q + u + q : m;
+  });
+  html = replaceCssUrls(html);
+  html = replaceAssetStrings(html);
+  return html;
+}
+function bundleGameFiles(){
+  var entry = null;
+  pendingGameFiles.forEach(function(g){
+    if(/\.html?$/i.test(g.path) && (!entry || /^index/i.test(g.name))) entry = g;
+  });
+  if(!entry) return Promise.reject(new Error('no .html page was included — add the game\'s main page file.'));
+  var textByPath = {}, assetByPath = {};
+  var jobs = pendingGameFiles.map(function(g){
+    if(/\.(html?|js|css|txt)$/i.test(g.path)) return readFileAs(g.file, 'text').then(function(t){ textByPath[g.path] = t; });
+    if(/\.json$/i.test(g.path)) return readFileAs(g.file, 'text').then(function(t){
+      textByPath[g.path] = t;
+      assetByPath[g.path] = 'data:application/json;charset=utf-8,' + encodeURIComponent(t);
+    });
+    if(/^image\//.test(g.file.type)) return shrinkBigImage(g.file).then(function(u){ assetByPath[g.path] = u; });
+    return readFileAs(g.file, 'url').then(function(u){ assetByPath[g.path] = u; });
+  });
+  return Promise.all(jobs).then(function(){
+    var bundle = assembleBundle(entry.path, textByPath, assetByPath);
+    if(bundle.length > 9500000) throw new Error('the combined game is too big (' + Math.round(bundle.length / 1048576) + ' MB). Shrink the image or model files and try again.');
+    return bundle;
+  });
+}
 
 /* ============ teacher review ============ */
 function updateReviewBadge(){
@@ -1030,7 +1196,7 @@ function renderReview(){
         '<div class="review-thumb" style="width:64px; height:64px; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:36px; background:' + esc(s.color) + ';">' + coverHtml(s) + '</div>' +
         '<div style="flex:1; min-width:220px;">' +
           '<h3 style="font-size:18px;">' + esc(s.title) + '<span class="status ' + esc(s.status) + '">' + esc(s.status.toUpperCase()) + '</span></h3>' +
-          '<p class="muted">by ' + esc(s.name) + (s.partner ? ' &amp; ' + esc(s.partner) : '') + ' · Period ' + esc(s.period) + ' · ' + esc(s.genre) + ' · v' + esc(s.version) + (s.isUpdate ? ' · UPDATE' : '') + ' · ' + fmtDate(s.ts) + '</p>' +
+          '<p class="muted">by ' + esc(s.name) + (s.partner ? ' &amp; ' + esc(s.partner) : '') + ' · Period ' + esc(s.period) + ' · ' + esc(s.genre) + ' · v' + esc(s.version) + (s.isUpdate ? ' · UPDATE' : '') + (s.multiFile ? ' · 📁 multi-file (' + (s.fileNames ? s.fileNames.length : 0) + ' files combined)' : '') + ' · ' + fmtDate(s.ts) + '</p>' +
           '<p style="font-size:14px; margin:6px 0;">' + esc(s.desc) + '</p>' +
           (s.whatsnew ? '<p style="font-size:13.5px; color:var(--gold);">What\'s new: ' + esc(s.whatsnew) + '</p>' : '') +
           '<div style="margin-top:10px;">' + btns + '</div>' +
