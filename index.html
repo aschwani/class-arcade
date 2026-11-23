@@ -1152,6 +1152,14 @@ function bundleGameFiles(){
     if(/\.html?$/i.test(g.path) && (!entry || /^index/i.test(g.name))) entry = g;
   });
   if(!entry) return Promise.reject(new Error('no .html page was included — add the game\'s main page file.'));
+  var totalBytes = 0;
+  pendingGameFiles.forEach(function(g){ totalBytes += g.file.size; });
+  if(totalBytes > 7000000){
+    var big = pendingGameFiles.slice().sort(function(a, b){ return b.file.size - a.file.size; }).slice(0, 5).map(function(g){
+      return g.path + ' (' + (g.file.size / 1048576).toFixed(1) + ' MB)';
+    }).join(', ');
+    return Promise.reject(new Error('the files add up to ' + (totalBytes / 1048576).toFixed(1) + ' MB, but a game on the Arcade can be about 9 MB total once combined. Biggest files: ' + big + '. Shrink or remove the biggest ones — 3D models and images are usually the problem — then try again.'));
+  }
   var textByPath = {}, assetByPath = {};
   var jobs = pendingGameFiles.map(function(g){
     if(/\.(html?|js|css|txt)$/i.test(g.path)) return readFileAs(g.file, 'text').then(function(t){ textByPath[g.path] = t; });
