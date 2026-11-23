@@ -209,7 +209,6 @@ function starString(avg, count){
   for(var i=1;i<=5;i++) s += (i<=full ? '★' : '☆');
   return '<span class="stars">' + s + '</span> <span class="muted">' + avg.toFixed(1) + ' (' + count + ' rating' + (count===1?'':'s') + ')</span>';
 }
-
 /* ============ live sync state (Firebase Realtime Database, REST API) ============ */
 var DB_URL = 'https://class-arcade-default-rtdb.firebaseio.com';
 var liveState = { enabled:false, online:false, ratings:{}, comments:{}, games:{}, streams:{} };
@@ -1038,16 +1037,32 @@ function setSubmissionStatus(id, status){
   var list = getSubmissions();
   list.forEach(function(s){ if(s.id === id) s.status = status; });
   saveSubmissions(list);
-  if(liveState.enabled){
-    /* Publish the decision to the database: approving puts the game in the
-       library on every computer; rejecting keeps it out everywhere. */
-    if(liveState.games[id]) liveState.games[id].status = status;
-    var rec = null;
-    allSubmissions().forEach(function(s){ if(s.id === id) rec = s; });
-    if(rec) pushSubmissionToDb(rec);
-  }
+  if(liveState.games[id]) liveState.games[id].status = status;
   renderReview();
   renderLibrary();
+  if(!liveState.enabled) return;
+  /* Publish the decision so every computer sees it: a small status-only
+     write for a game already in the database, or a full upload for a game
+     that so far only exists on this computer. If the write fails, say so —
+     never let a decision look published when it only saved locally. */
+  var write;
+  if(liveState.games[id]){
+    write = dbRequest('/games/' + encodeURIComponent(id) + '.json', {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status: status})
+    });
+  } else {
+    var rec = null;
+    allSubmissions().forEach(function(s){ if(s.id === id) rec = s; });
+    if(!rec) return;
+    write = dbRequest('/games/' + encodeURIComponent(id) + '.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(rec)
+    });
+  }
+  write.catch(function(){
+    alert('That decision saved on this computer, but it could not be sent to the class database, so other computers will not see it yet. Check that the header says Live, then try again.');
+  });
 }
 
 /* ============ init ============ */
