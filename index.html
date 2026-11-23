@@ -233,7 +233,7 @@ function dbRequest(path, opts){
 var SEED_GAMES = [
   { id:'neon-snake', type:'builtin', gameKey:'snake', title:'Neon Snake', creator:'Demo Game', partner:'',
     period:1, genre:'Action', version:'1.2', emoji:'🐍', color:'#14532d',
-    desc:'The classic snake game with a neon twist. Eat the glowing orbs to grow — just don't bite yourself or hit the wall!',
+    desc:'The classic snake game with a neon twist. Eat the glowing orbs to grow — just don\'t bite yourself or hit the wall!',
     howto:'Use the arrow keys (or the on-screen buttons) to steer the snake. Eat food to grow longer and score. The game speeds up as you grow. Press Start to play.',
     seedRatings:[5,5,4,5,4],
     seedComments:[
@@ -457,7 +457,7 @@ function renderLibrary(){
         '<p class="muted" style="margin-bottom:6px;">by ' + esc(f.creator) + ' · Period ' + esc(f.period) + ' · v' + esc(f.version) + '</p>' +
         '<p style="font-size:14.5px; margin-bottom:9px;">' + esc(f.desc) + '</p>' +
         starString(avgOf(fr), fr.length) + '<br>' +
-        '<button class="btn btn-primary" style="margin-top:10px;" onclick="openGame('' + f.id + '')">▶ Play ' + esc(f.title) + '</button>' +
+        '<button class="btn btn-primary" style="margin-top:10px;" onclick="openGame(\'' + f.id + '\')">▶ Play ' + esc(f.title) + '</button>' +
       '</div></div>';
 
   // filtering
@@ -473,7 +473,7 @@ function renderLibrary(){
   document.getElementById('no-results').style.display = shown.length ? 'none' : 'block';
   document.getElementById('game-grid').innerHTML = shown.map(function(g){
     var r = ratingsFor(g);
-    return '<div class="card" onclick="openGame('' + g.id + '')">' +
+    return '<div class="card" onclick="openGame(\'' + g.id + '\')">' +
       '<div class="card-cover" style="background:' + esc(g.color) + ';">' + coverHtml(g) + '</div>' +
       '<div class="card-body"><h3>' + esc(g.title) + '</h3>' +
       '<div class="byline">by ' + esc(g.creator) + (g.partner ? ' &amp; ' + esc(g.partner) : '') + ' · Period ' + esc(g.period) + '</div>' +
@@ -531,7 +531,7 @@ function renderDetail(){
       '</div>' +
       '<form onsubmit="return handleUpdate(event)" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">' +
         '<div class="field"><label for="u-version">New version number</label><input type="text" id="u-version" required maxlength="10" placeholder="e.g. 1.4"></div>' +
-        '<div class="field"><label for="u-text">What's new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
+        '<div class="field"><label for="u-text">What\'s new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
         '<button type="submit" class="btn">Post update</button></form></div>' +
     '<div class="panel"><h3 id="comments-title">💬 Comments (' + comments.length + ')</h3>' +
       '<p class="muted" style="margin-bottom:8px;">Comments may be reviewed by your teacher.</p><div id="comments-list">' +
@@ -690,7 +690,7 @@ function launchSnake(container){
     '<div class="ctl-row"><button class="btn btn-primary" id="sn-start">▶ Start</button><button class="btn" id="sn-reset">↺ Restart</button></div>' +
     '<div class="ctl-row"><button class="ctl-btn" data-d="up">⬆</button></div>' +
     '<div class="ctl-row"><button class="ctl-btn" data-d="left">⬅</button><button class="ctl-btn" data-d="down">⬇</button><button class="ctl-btn" data-d="right">➡</button></div>' +
-    '<p class="muted" style="margin-top:8px;">Arrow keys work too. Don't hit the wall or yourself!</p></div>';
+    '<p class="muted" style="margin-top:8px;">Arrow keys work too. Don\'t hit the wall or yourself!</p></div>';
   var cv = document.getElementById('sn-canvas'), ctx = cv.getContext('2d');
   var CELL = 20, N = 20;
   var snake, dir, nextDir, food, score, timer = null, speed, dead = false;
@@ -800,7 +800,7 @@ function launchCoin(container){
     document.getElementById('cc-time').textContent = left;
     if(elapsed >= 30){
       running = false;
-      drawScene('Time's up! Final score: ' + score);
+      drawScene('Time\'s up! Final score: ' + score);
       return;
     }
     if(keys.ArrowLeft) paddle.x = Math.max(0, paddle.x - 6);
@@ -918,7 +918,7 @@ function previewCoverImage(ev){
       var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
       pendingCoverImg = cv.toDataURL('image/jpeg', 0.85);
-      pv.innerHTML = '<img src="' + pendingCoverImg + '" style="max-width:230px; max-height:150px; border-radius:10px; border:1px solid var(--border);" alt="Cover preview"><p class="muted" style="margin-top:4px;">That's your cover ✓ — it replaces the emoji.</p>';
+      pv.innerHTML = '<img src="' + pendingCoverImg + '" style="max-width:230px; max-height:150px; border-radius:10px; border:1px solid var(--border);" alt="Cover preview"><p class="muted" style="margin-top:4px;">That\'s your cover ✓ — it replaces the emoji.</p>';
     };
     img.src = rd.result;
   };
@@ -976,13 +976,12 @@ function submissionFileText(s){
     (s.coverImg ? '  Cover image (data): ' + s.coverImg : ''),
     '  Description: ' + s.desc,
     '  How to play: ' + s.howto,
-    (s.whatsnew ? '  What's new: ' + s.whatsnew : ''),
+    (s.whatsnew ? '  What\'s new: ' + s.whatsnew : ''),
     '  Submitted  : ' + new Date(s.ts).toLocaleString(),
     '============================================= -->',
     ''
   ];
-  return lines.join('
-') + (s.code || '');
+  return lines.join('\n') + (s.code || '');
 }
 function downloadSubmissionById(id){
   var s = null;
@@ -1016,12 +1015,12 @@ function renderReview(){
   box.innerHTML = list.map(function(s){
     var btns = '';
     if(s.status === 'pending'){
-      btns = '<button class="btn btn-primary" onclick="setSubmissionStatus('' + s.id + '','approved')">✔ Approve — add to library</button> ' +
-             '<button class="btn btn-danger" onclick="setSubmissionStatus('' + s.id + '','rejected')">✖ Reject</button> ';
+      btns = '<button class="btn btn-primary" onclick="setSubmissionStatus(\'' + s.id + '\',\'approved\')">✔ Approve — add to library</button> ' +
+             '<button class="btn btn-danger" onclick="setSubmissionStatus(\'' + s.id + '\',\'rejected\')">✖ Reject</button> ';
     } else if(s.status === 'approved'){
-      btns = '<button class="btn" onclick="openGame('sub-' + s.id + '')">▶ View in library</button> ';
+      btns = '<button class="btn" onclick="openGame(\'sub-' + s.id + '\')">▶ View in library</button> ';
     }
-    btns += '<button class="btn" onclick="downloadSubmissionById('' + s.id + '')">⬇ Download file</button>';
+    btns += '<button class="btn" onclick="downloadSubmissionById(\'' + s.id + '\')">⬇ Download file</button>';
     return '<div class="review-card">' +
       '<div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">' +
         '<div class="review-thumb" style="width:64px; height:64px; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:36px; background:' + esc(s.color) + ';">' + coverHtml(s) + '</div>' +
@@ -1029,7 +1028,7 @@ function renderReview(){
           '<h3 style="font-size:18px;">' + esc(s.title) + '<span class="status ' + esc(s.status) + '">' + esc(s.status.toUpperCase()) + '</span></h3>' +
           '<p class="muted">by ' + esc(s.name) + (s.partner ? ' &amp; ' + esc(s.partner) : '') + ' · Period ' + esc(s.period) + ' · ' + esc(s.genre) + ' · v' + esc(s.version) + (s.isUpdate ? ' · UPDATE' : '') + ' · ' + fmtDate(s.ts) + '</p>' +
           '<p style="font-size:14px; margin:6px 0;">' + esc(s.desc) + '</p>' +
-          (s.whatsnew ? '<p style="font-size:13.5px; color:var(--gold);">What's new: ' + esc(s.whatsnew) + '</p>' : '') +
+          (s.whatsnew ? '<p style="font-size:13.5px; color:var(--gold);">What\'s new: ' + esc(s.whatsnew) + '</p>' : '') +
           '<div style="margin-top:10px;">' + btns + '</div>' +
         '</div></div></div>';
   }).join('');
@@ -1207,8 +1206,8 @@ function renderPendingComments(){
   } else {
     html += list.map(function(c){
       return '<div class="comment"><span class="cname">' + esc(c.name) + '</span><span class="cdate">' + fmtDate(c.ts) + ' · on ' + esc(c.title) + '</span><p>' + esc(c.text) + '</p>' +
-        '<div style="margin-top:7px;"><button class="btn btn-primary" onclick="approveComment('' + c.dbId + '','' + c.key + '')">✔ Approve</button> ' +
-        '<button class="btn btn-danger" onclick="rejectComment('' + c.dbId + '','' + c.key + '')">✖ Reject</button></div></div>';
+        '<div style="margin-top:7px;"><button class="btn btn-primary" onclick="approveComment(\'' + c.dbId + '\',\'' + c.key + '\')">✔ Approve</button> ' +
+        '<button class="btn btn-danger" onclick="rejectComment(\'' + c.dbId + '\',\'' + c.key + '\')">✖ Reject</button></div></div>';
     }).join('');
   }
   html += '</div>';
