@@ -209,6 +209,7 @@ function starString(avg, count){
   for(var i=1;i<=5;i++) s += (i<=full ? '★' : '☆');
   return '<span class="stars">' + s + '</span> <span class="muted">' + avg.toFixed(1) + ' (' + count + ' rating' + (count===1?'':'s') + ')</span>';
 }
+
 /* ============ live sync state (Firebase Realtime Database, REST API) ============ */
 var DB_URL = 'https://class-arcade-default-rtdb.firebaseio.com';
 var liveState = { enabled:false, online:false, ratings:{}, comments:{}, games:{}, streams:{} };
@@ -1032,12 +1033,58 @@ function renderReview(){
         '</div></div></div>';
   }).join('');
 }
+function normTitle(t){ return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+function titleDistance(a, b){
+  var m = a.length, n = b.length;
+  if(Math.abs(m - n) > 2) return 99;
+  var prev = [], cur = [], i, j;
+  for(j = 0; j <= n; j++) prev[j] = j;
+  for(i = 1; i <= m; i++){
+    cur[0] = i;
+    for(j = 1; j <= n; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+    }
+    var tmp = prev; prev = cur; cur = tmp;
+  }
+  return prev[n];
+}
+function sameCreator(a, b){
+  var na = String(a || '').trim().toLowerCase().split(/\s+/);
+  var nb = String(b || '').trim().toLowerCase().split(/\s+/);
+  if(na[0] !== nb[0]) return false;
+  if(na.length < 2 || nb.length < 2) return true;
+  return na[na.length - 1].charAt(0) === nb[nb.length - 1].charAt(0);
+}
+/* Same game = same creator and (nearly) the same title — the small title
+   tolerance covers typos between versions, e.g. "Siege" vs "Seige". */
+function sameGame(a, b){
+  if(!a || !b || a.id === b.id) return false;
+  if(!sameCreator(a.name, b.name)) return false;
+  var ta = normTitle(a.title), tb = normTitle(b.title);
+  return ta === tb || titleDistance(ta, tb) <= 2;
+}
 function setSubmissionStatus(id, status){
   if(!reviewUnlocked()){ alert('Teacher Review is locked.'); return; }
   var list = getSubmissions();
   list.forEach(function(s){ if(s.id === id) s.status = status; });
+  /* Approving an update retires the older approved version(s) of the same
+     game, so the library keeps only the newest version. */
+  var retireIds = [];
+  if(status === 'approved'){
+    var target = null;
+    allSubmissions().forEach(function(s){ if(s.id === id) target = s; });
+    if(target && target.isUpdate){
+      allSubmissions().forEach(function(s){
+        if(s.status === 'approved' && sameGame(target, s)) retireIds.push(s.id);
+      });
+    }
+  }
+  retireIds.forEach(function(rid){
+    list.forEach(function(s){ if(s.id === rid) s.status = 'rejected'; });
+  });
   saveSubmissions(list);
   if(liveState.games[id]) liveState.games[id].status = status;
+  retireIds.forEach(function(rid){ if(liveState.games[rid]) liveState.games[rid].status = 'rejected'; });
   renderReview();
   renderLibrary();
   if(!liveState.enabled) return;
@@ -1045,22 +1092,30 @@ function setSubmissionStatus(id, status){
      write for a game already in the database, or a full upload for a game
      that so far only exists on this computer. If the write fails, say so —
      never let a decision look published when it only saved locally. */
-  var write;
+  var writes = [];
   if(liveState.games[id]){
-    write = dbRequest('/games/' + encodeURIComponent(id) + '.json', {
+    writes.push(dbRequest('/games/' + encodeURIComponent(id) + '.json', {
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({status: status})
-    });
+    }));
   } else {
     var rec = null;
     allSubmissions().forEach(function(s){ if(s.id === id) rec = s; });
     if(!rec) return;
-    write = dbRequest('/games/' + encodeURIComponent(id) + '.json', {
+    writes.push(dbRequest('/games/' + encodeURIComponent(id) + '.json', {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(rec)
-    });
+    }));
   }
-  write.catch(function(){
+  retireIds.forEach(function(rid){
+    if(liveState.games[rid]){
+      writes.push(dbRequest('/games/' + encodeURIComponent(rid) + '.json', {
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({status: 'rejected'})
+      }));
+    }
+  });
+  Promise.all(writes).catch(function(){
     alert('That decision saved on this computer, but it could not be sent to the class database, so other computers will not see it yet. Check that the header says Live, then try again.');
   });
 }
