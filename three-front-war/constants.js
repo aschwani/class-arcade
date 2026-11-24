@@ -1,0 +1,705 @@
+// constants.js
+// MASTER TECHNICAL BLUEPRINT — Shared Constants, Settings Schema, Equipment & Weapon/Melee Database
+
+window.WW2 = window.WW2 || {};
+
+WW2.MOVEMENT = {
+  // Call of Duty / IW Engine mouse turn standard (degrees per mouse count at sens 1.0)
+  COD_YAW_DEG_PER_COUNT: 0.022,
+  MAX_PITCH: Math.PI * 0.5, // Full +/- 90 degrees vertical look
+
+  // Grounded WWII pacing (slightly slower than MW4 base; NO Tactical Sprint)
+  BASE_WALK_SPEED: 3.6,     // meters/sec
+  OMNI_SPRINT_SPEED: 5.5,   // meters/sec (works 360° in any WASD direction)
+  CROUCH_SPEED: 2.1,        // meters/sec
+  PRONE_SPEED: 1.0,         // meters/sec
+  ACCEL: 13.5,              // grounded start inertia
+  FRICTION: 11.5,           // stopping deceleration
+
+  // Jump, Gravity, Mantle & Sprint-Vault
+  JUMP_IMPULSE: 5.2,        // upward launch velocity (m/s -> ~0.75m peak height)
+  GRAVITY: 18.0,            // downward acceleration (m/s^2)
+  MANTLE_MAX_HEIGHT: 1.35,  // max obstacle height player can climb onto (meters)
+  MANTLE_REACH: 1.25,       // horizontal reach to grab cover ledge (meters)
+  MANTLE_DURATION: 0.28,    // climb-onto-surface duration (sec)
+  VAULT_DURATION: 0.34,     // sprint-vault-over-barrier duration (sec)
+
+  // Omnidirectional Slide & Dive
+  SLIDE_IMPULSE: 7.4,
+  SLIDE_FRICTION: 9.0,
+  SLIDE_MIN_SPEED: 2.8,
+  SLIDE_COOLDOWN: 0.90,
+
+  DIVE_IMPULSE: 6.6,
+  DIVE_DURATION: 0.52,
+  DIVE_RECOVERY: 0.45,
+
+  // Camera eye heights (in meters; 1.0 = 1 meter)
+  EYE_HEIGHT_STAND: 1.70,
+  EYE_HEIGHT_CROUCH: 1.00,
+  EYE_HEIGHT_SLIDE: 0.65,
+  EYE_HEIGHT_PRONE: 0.38,
+  EYE_LERP_SPEED: 12.0,
+
+  PLAYER_RADIUS: 0.35
+};
+
+WW2.MELEE_CONSTANTS = {
+  HOLD_EQUIP_TIME: 0.50,    // 0.5s hold to equip Slot 3 when Quick Melee & Equip Melee share a key
+  BUTT_DAMAGE: 75,
+  BUTT_HEADSHOT_MULT: 1.5,
+  BUTT_RANGE: 2.15,
+  BUTT_COOLDOWN: 0.50,
+  BUTT_SWING_DURATION: 0.30
+};
+
+WW2.EQUIPMENT = {
+  // ================= LETHALS =================
+  frag: {
+    id: 'frag',
+    name: 'Mk 2 Frag',
+    slot: 'LETHAL',
+    fuse: 5.0,
+    cookable: true,
+    sticky: false,
+    deployable: false,
+    radius: 7.5,
+    maxDamage: 165,
+    throwSpeed: 15.5
+  },
+  sticky: {
+    id: 'sticky',
+    name: 'No. 74 Sticky',
+    slot: 'LETHAL',
+    fuse: 4.0,
+    cookable: false,
+    sticky: true,
+    deployable: false,
+    radius: 6.5,
+    maxDamage: 175,
+    throwSpeed: 16.5
+  },
+  claymore: {
+    id: 'claymore',
+    name: 'Claymore Mine',
+    slot: 'LETHAL',
+    fuse: 0.6,
+    cookable: false,
+    sticky: false,
+    deployable: true,
+    triggerRange: 4.2,
+    triggerHalfAngle: 0.60,
+    radius: 6.0,
+    maxDamage: 185,
+    throwSpeed: 0
+  },
+
+  // ================= TACTICALS =================
+  smoke: {
+    id: 'smoke',
+    name: 'M18 Smoke',
+    slot: 'TACTICAL',
+    fuse: 3.0,
+    cookable: false,
+    sticky: false,
+    deployable: false,
+    duration: 12.0,
+    radius: 5.5,
+    throwSpeed: 15.0
+  },
+  flashbang: {
+    id: 'flashbang',
+    name: 'Flashbang',
+    slot: 'TACTICAL',
+    fuse: 4.0,
+    cookable: false,
+    sticky: false,
+    deployable: false,
+    stunDuration: 4.0,
+    radius: 9.0,
+    throwSpeed: 15.5
+  },
+  concussion: {
+    id: 'concussion',
+    name: 'Concussion',
+    slot: 'TACTICAL',
+    fuse: 3.0,
+    cookable: false,
+    sticky: false,
+    deployable: false,
+    stunDuration: 3.5,
+    radius: 8.5,
+    throwSpeed: 15.5
+  }
+};
+
+WW2.LETHAL_ORDER = ['frag', 'sticky', 'claymore'];
+WW2.TACTICAL_ORDER = ['smoke', 'flashbang', 'concussion'];
+
+WW2.DEFAULT_SETTINGS = {
+  controls: {
+    mouseSens: 6.0,         // CoD sensitivity scale (1.0 - 20.0)
+    adsSensMult: 1.0,       // ADS multiplier (0.20 - 2.00)
+    invertY: false
+  },
+  movement: {
+    sprintBehavior: 'HOLD',   // 'HOLD' | 'TOGGLE'
+    crouchBehavior: 'TOGGLE', // 'TOGGLE' | 'HOLD'
+    proneBehavior: 'TOGGLE',  // 'TOGGLE' | 'HOLD'
+    autoOmniSprint: false
+  },
+  audio: {
+    masterVolume: 0.80,
+    sfxVolume: 0.85,
+    hitmarkerVolume: 0.90
+  },
+  graphics: {
+    fov: 85,                // Horizontal FOV in degrees (65 - 110)
+    rayStepPx: 2,           // 1 = Ultra, 2 = High, 3 = Performance
+    showMinimap: true,
+    showTracers: true,
+    showDamageNumbers: true
+  },
+  bindings: {
+    moveForward: 'KeyW',
+    moveBack: 'KeyS',
+    moveLeft: 'KeyA',
+    moveRight: 'KeyD',
+    jumpMantle: 'Space',
+    sprint: 'ShiftLeft',
+    crouchSlide: 'KeyC',
+    diveProne: 'KeyZ',
+    reload: 'KeyR',
+    quickMelee: 'KeyV',
+    equipMelee: 'KeyV',
+    lethal: 'KeyG',
+    tactical: 'KeyF',
+    slot1: 'Digit1',
+    slot2: 'Digit2',
+    slot3: 'Digit3',
+    cycleLethal: 'Digit4',
+    cycleTactical: 'Digit5',
+    quickSwap: 'KeyQ',
+    resetTargets: 'KeyT',
+    toggleMinimap: 'KeyM'
+  }
+};
+
+// Complete Arsenal: 20 Firearms (2x Buffed Recoil) + 3 Dedicated Slot-3 Melee Weapons
+WW2.WEAPONS = {
+  // ================= SMGs =================
+  thompson_m1928: {
+    id: 'thompson_m1928',
+    name: 'Thompson M1928',
+    category: 'SMG',
+    fireMode: 'AUTO',
+    rpm: 700,
+    damage: 30,
+    headshotMult: 1.6,
+    rangeMax: 65,
+    magSize: 30,
+    reserveMax: 180,
+    reloadTime: 2.1,
+    moveMult: 0.99,
+    adsMoveMult: 0.78,
+    adsZoom: 1.15,
+    recoilPitch: 0.024,
+    recoilYaw: 0.016,
+    recoilBiasYaw: 0.0045,
+    spreadHip: 0.042,
+    spreadAds: 0.010,
+    spriteKey: 'thompson_m1928.png'
+  },
+  mp40: {
+    id: 'mp40',
+    name: 'MP40',
+    category: 'SMG',
+    fireMode: 'AUTO',
+    rpm: 525,
+    damage: 29,
+    headshotMult: 1.6,
+    rangeMax: 75,
+    magSize: 32,
+    reserveMax: 192,
+    reloadTime: 2.0,
+    moveMult: 1.00,
+    adsMoveMult: 0.80,
+    adsZoom: 1.15,
+    recoilPitch: 0.0165,
+    recoilYaw: 0.0105,
+    recoilBiasYaw: -0.002,
+    spreadHip: 0.036,
+    spreadAds: 0.009,
+    spriteKey: 'mp40.png'
+  },
+  grease_gun: {
+    id: 'grease_gun',
+    name: 'M3 Grease Gun',
+    category: 'SMG',
+    fireMode: 'AUTO',
+    rpm: 450,
+    damage: 34,
+    headshotMult: 1.65,
+    rangeMax: 65,
+    magSize: 30,
+    reserveMax: 180,
+    reloadTime: 2.2,
+    moveMult: 1.00,
+    adsMoveMult: 0.80,
+    adsZoom: 1.15,
+    recoilPitch: 0.0155,
+    recoilYaw: 0.0095,
+    recoilBiasYaw: 0.002,
+    spreadHip: 0.038,
+    spreadAds: 0.010,
+    spriteKey: 'grease_gun.png'
+  },
+  sten: {
+    id: 'sten',
+    name: 'Sten Mk II',
+    category: 'SMG',
+    fireMode: 'AUTO',
+    rpm: 500,
+    damage: 28,
+    headshotMult: 1.6,
+    rangeMax: 65,
+    magSize: 32,
+    reserveMax: 192,
+    reloadTime: 1.9,
+    moveMult: 1.02,
+    adsMoveMult: 0.82,
+    adsZoom: 1.15,
+    recoilPitch: 0.018,
+    recoilYaw: 0.014,
+    recoilBiasYaw: -0.003,
+    spreadHip: 0.040,
+    spreadAds: 0.011,
+    spriteKey: 'sten.png'
+  },
+  ppsh_41: {
+    id: 'ppsh_41',
+    name: 'PPSh-41',
+    category: 'SMG',
+    fireMode: 'AUTO',
+    rpm: 1000,
+    damage: 24,
+    headshotMult: 1.55,
+    rangeMax: 60,
+    magSize: 71,
+    reserveMax: 213,
+    reloadTime: 2.8,
+    moveMult: 0.98,
+    adsMoveMult: 0.76,
+    adsZoom: 1.15,
+    recoilPitch: 0.020,
+    recoilYaw: 0.018,
+    recoilBiasYaw: 0.005,
+    spreadHip: 0.048,
+    spreadAds: 0.013,
+    spriteKey: 'ppsh_41.png'
+  },
+
+  // ================= ASSAULT / BATTLE RIFLES =================
+  stg_44: {
+    id: 'stg_44',
+    name: 'StG 44',
+    category: 'AR',
+    fireMode: 'AUTO',
+    rpm: 540,
+    damage: 36,
+    headshotMult: 1.8,
+    rangeMax: 120,
+    magSize: 30,
+    reserveMax: 180,
+    reloadTime: 2.3,
+    moveMult: 0.94,
+    adsMoveMult: 0.70,
+    adsZoom: 1.25,
+    recoilPitch: 0.024,
+    recoilYaw: 0.013,
+    recoilBiasYaw: 0.003,
+    spreadHip: 0.052,
+    spreadAds: 0.006,
+    spriteKey: 'stg_44.png'
+  },
+  fg42: {
+    id: 'fg42',
+    name: 'FG 42',
+    category: 'AR',
+    fireMode: 'AUTO',
+    rpm: 750,
+    damage: 42,
+    headshotMult: 1.9,
+    rangeMax: 130,
+    magSize: 20,
+    reserveMax: 140,
+    reloadTime: 2.4,
+    moveMult: 0.93,
+    adsMoveMult: 0.68,
+    adsZoom: 1.35,
+    recoilPitch: 0.034,
+    recoilYaw: 0.018,
+    recoilBiasYaw: 0.006,
+    spreadHip: 0.058,
+    spreadAds: 0.005,
+    spriteKey: 'fg42.png'
+  },
+  m2_carbine: {
+    id: 'm2_carbine',
+    name: 'M2 Carbine',
+    category: 'AR',
+    fireMode: 'AUTO',
+    rpm: 600,
+    damage: 33,
+    headshotMult: 1.8,
+    rangeMax: 105,
+    magSize: 30,
+    reserveMax: 180,
+    reloadTime: 1.9,
+    moveMult: 0.98,
+    adsMoveMult: 0.78,
+    adsZoom: 1.20,
+    recoilPitch: 0.022,
+    recoilYaw: 0.011,
+    recoilBiasYaw: 0.002,
+    spreadHip: 0.044,
+    spreadAds: 0.006,
+    spriteKey: 'm2_carbine.png'
+  },
+  fedorov_avtomat: {
+    id: 'fedorov_avtomat',
+    name: 'Fedorov Avtomat',
+    category: 'AR',
+    fireMode: 'AUTO',
+    rpm: 600,
+    damage: 35,
+    headshotMult: 1.8,
+    rangeMax: 110,
+    magSize: 25,
+    reserveMax: 150,
+    reloadTime: 2.5,
+    moveMult: 0.94,
+    adsMoveMult: 0.70,
+    adsZoom: 1.20,
+    recoilPitch: 0.026,
+    recoilYaw: 0.015,
+    recoilBiasYaw: -0.003,
+    spreadHip: 0.054,
+    spreadAds: 0.007,
+    spriteKey: 'fedorov_avtomat.png'
+  },
+  bar_m1918: {
+    id: 'bar_m1918',
+    name: 'BAR M1918',
+    category: 'AR',
+    fireMode: 'AUTO',
+    rpm: 500,
+    damage: 44,
+    headshotMult: 1.95,
+    rangeMax: 140,
+    magSize: 20,
+    reserveMax: 140,
+    reloadTime: 2.6,
+    moveMult: 0.91,
+    adsMoveMult: 0.65,
+    adsZoom: 1.25,
+    recoilPitch: 0.036,
+    recoilYaw: 0.017,
+    recoilBiasYaw: 0.004,
+    spreadHip: 0.062,
+    spreadAds: 0.005,
+    spriteKey: 'bar_m1918.png'
+  },
+
+  // ================= SNIPER / MARKSMAN RIFLES =================
+  m1903a4_springfield: {
+    id: 'm1903a4_springfield',
+    name: 'M1903A4 Springfield',
+    category: 'SNIPER',
+    fireMode: 'BOLT',
+    rpm: 48,
+    damage: 95,
+    headshotMult: 2.5,
+    rangeMax: 240,
+    magSize: 5,
+    reserveMax: 45,
+    reloadTime: 2.9,
+    moveMult: 0.89,
+    adsMoveMult: 0.55,
+    adsZoom: 3.5,
+    recoilPitch: 0.078,
+    recoilYaw: 0.019,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.110,
+    spreadAds: 0.0005,
+    spriteKey: 'm1903a4_springfield.png'
+  },
+  mosin_nagant: {
+    id: 'mosin_nagant',
+    name: 'Mosin-Nagant M1891/30',
+    category: 'SNIPER',
+    fireMode: 'BOLT',
+    rpm: 45,
+    damage: 98,
+    headshotMult: 2.5,
+    rangeMax: 240,
+    magSize: 5,
+    reserveMax: 45,
+    reloadTime: 3.0,
+    moveMult: 0.88,
+    adsMoveMult: 0.54,
+    adsZoom: 3.5,
+    recoilPitch: 0.084,
+    recoilYaw: 0.021,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.115,
+    spreadAds: 0.0005,
+    spriteKey: 'mosin_nagant.png'
+  },
+  kar_98k: {
+    id: 'kar_98k',
+    name: 'Karabiner 98k',
+    category: 'SNIPER',
+    fireMode: 'BOLT',
+    rpm: 50,
+    damage: 96,
+    headshotMult: 2.5,
+    rangeMax: 240,
+    magSize: 5,
+    reserveMax: 45,
+    reloadTime: 2.8,
+    moveMult: 0.89,
+    adsMoveMult: 0.55,
+    adsZoom: 3.5,
+    recoilPitch: 0.078,
+    recoilYaw: 0.019,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.110,
+    spreadAds: 0.0005,
+    spriteKey: 'kar_98k.png'
+  },
+  type_97_sniper: {
+    id: 'type_97_sniper',
+    name: 'Type 97 Sniper Rifle',
+    category: 'SNIPER',
+    fireMode: 'BOLT',
+    rpm: 52,
+    damage: 88,
+    headshotMult: 2.5,
+    rangeMax: 220,
+    magSize: 5,
+    reserveMax: 50,
+    reloadTime: 2.7,
+    moveMult: 0.90,
+    adsMoveMult: 0.58,
+    adsZoom: 2.5,
+    recoilPitch: 0.068,
+    recoilYaw: 0.015,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.105,
+    spreadAds: 0.0005,
+    spriteKey: 'type_97_sniper.png'
+  },
+  svt_40: {
+    id: 'svt_40',
+    name: 'SVT-40',
+    category: 'SNIPER',
+    fireMode: 'SEMI',
+    rpm: 300,
+    damage: 62,
+    headshotMult: 2.1,
+    rangeMax: 190,
+    magSize: 10,
+    reserveMax: 70,
+    reloadTime: 2.6,
+    moveMult: 0.91,
+    adsMoveMult: 0.60,
+    adsZoom: 2.8,
+    recoilPitch: 0.054,
+    recoilYaw: 0.017,
+    recoilBiasYaw: 0.002,
+    spreadHip: 0.095,
+    spreadAds: 0.001,
+    spriteKey: 'svt_40.png'
+  },
+
+  // ================= PISTOLS / REVOLVERS =================
+  colt_m1911a1: {
+    id: 'colt_m1911a1',
+    name: 'Colt M1911A1',
+    category: 'PISTOL',
+    fireMode: 'SEMI',
+    rpm: 360,
+    damage: 38,
+    headshotMult: 2.0,
+    rangeMax: 55,
+    magSize: 7,
+    reserveMax: 56,
+    reloadTime: 1.4,
+    moveMult: 1.04,
+    adsMoveMult: 0.88,
+    adsZoom: 1.10,
+    recoilPitch: 0.035,
+    recoilYaw: 0.012,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.030,
+    spreadAds: 0.007,
+    spriteKey: 'colt_m1911a1.png'
+  },
+  tokarev_tt33: {
+    id: 'tokarev_tt33',
+    name: 'Tokarev TT-33',
+    category: 'PISTOL',
+    fireMode: 'SEMI',
+    rpm: 400,
+    damage: 34,
+    headshotMult: 2.0,
+    rangeMax: 55,
+    magSize: 8,
+    reserveMax: 64,
+    reloadTime: 1.4,
+    moveMult: 1.04,
+    adsMoveMult: 0.88,
+    adsZoom: 1.10,
+    recoilPitch: 0.031,
+    recoilYaw: 0.011,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.028,
+    spreadAds: 0.006,
+    spriteKey: 'tokarev_tt33.png'
+  },
+  luger_p08: {
+    id: 'luger_p08',
+    name: 'Luger P08',
+    category: 'PISTOL',
+    fireMode: 'SEMI',
+    rpm: 420,
+    damage: 31,
+    headshotMult: 2.0,
+    rangeMax: 55,
+    magSize: 8,
+    reserveMax: 64,
+    reloadTime: 1.35,
+    moveMult: 1.05,
+    adsMoveMult: 0.90,
+    adsZoom: 1.10,
+    recoilPitch: 0.027,
+    recoilYaw: 0.010,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.026,
+    spreadAds: 0.006,
+    spriteKey: 'luger_p08.png'
+  },
+  type_26_revolver: {
+    id: 'type_26_revolver',
+    name: 'Type 26 Revolver',
+    category: 'PISTOL',
+    fireMode: 'SEMI',
+    rpm: 280,
+    damage: 36,
+    headshotMult: 2.0,
+    rangeMax: 50,
+    magSize: 6,
+    reserveMax: 48,
+    reloadTime: 2.1,
+    moveMult: 1.04,
+    adsMoveMult: 0.88,
+    adsZoom: 1.10,
+    recoilPitch: 0.033,
+    recoilYaw: 0.012,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.028,
+    spreadAds: 0.007,
+    spriteKey: 'type_26_revolver.png'
+  },
+  colt_m1917: {
+    id: 'colt_m1917',
+    name: 'Colt M1917',
+    category: 'PISTOL',
+    fireMode: 'SEMI',
+    rpm: 260,
+    damage: 46,
+    headshotMult: 2.1,
+    rangeMax: 55,
+    magSize: 6,
+    reserveMax: 48,
+    reloadTime: 2.0,
+    moveMult: 1.03,
+    adsMoveMult: 0.86,
+    adsZoom: 1.10,
+    recoilPitch: 0.046,
+    recoilYaw: 0.015,
+    recoilBiasYaw: 0.0,
+    spreadHip: 0.032,
+    spreadAds: 0.007,
+    spriteKey: 'colt_m1917.png'
+  },
+
+  // ================= SLOT 3 DEDICATED MELEE =================
+  trench_knife: {
+    id: 'trench_knife',
+    name: 'M1918 Trench Knife',
+    category: 'MELEE',
+    fireMode: 'MELEE',
+    rpm: 115,
+    damage: 135,
+    headshotMult: 1.5,
+    rangeMax: 2.35,
+    magSize: 0,
+    reserveMax: 0,
+    reloadTime: 0,
+    moveMult: 1.07,
+    adsMoveMult: 1.07,
+    adsZoom: 1.0,
+    recoilPitch: 0,
+    recoilYaw: 0,
+    recoilBiasYaw: 0,
+    spreadHip: 0,
+    spreadAds: 0,
+    spriteKey: 'trench_knife.png'
+  },
+  entrenching_shovel: {
+    id: 'entrenching_shovel',
+    name: 'Entrenching Shovel',
+    category: 'MELEE',
+    fireMode: 'MELEE',
+    rpm: 95,
+    damage: 150,
+    headshotMult: 1.5,
+    rangeMax: 2.55,
+    magSize: 0,
+    reserveMax: 0,
+    reloadTime: 0,
+    moveMult: 1.05,
+    adsMoveMult: 1.05,
+    adsZoom: 1.0,
+    recoilPitch: 0,
+    recoilYaw: 0,
+    recoilBiasYaw: 0,
+    spreadHip: 0,
+    spreadAds: 0,
+    spriteKey: 'entrenching_shovel.png'
+  },
+  type_95_shin_gunto: {
+    id: 'type_95_shin_gunto',
+    name: 'Type 95 Katana',
+    category: 'MELEE',
+    fireMode: 'MELEE',
+    rpm: 105,
+    damage: 160,
+    headshotMult: 1.5,
+    rangeMax: 2.75,
+    magSize: 0,
+    reserveMax: 0,
+    reloadTime: 0,
+    moveMult: 1.06,
+    adsMoveMult: 1.06,
+    adsZoom: 1.0,
+    recoilPitch: 0,
+    recoilYaw: 0,
+    recoilBiasYaw: 0,
+    spreadHip: 0,
+    spreadAds: 0,
+    spriteKey: 'type_95_shin_gunto.png'
+  }
+};

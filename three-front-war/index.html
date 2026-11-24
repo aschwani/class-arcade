@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Call of Duty: Three-Front War - Beta 1.0</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0e100f;
+      color: #e8ede4;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+      user-select: none;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+
+    /* ================= HOME SCREEN ================= */
+    #homeScreen {
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(10, 11, 11, 0.68) 0%, rgba(10, 11, 11, 0.12) 28%, rgba(10, 11, 11, 0.18) 78%, rgba(10, 11, 11, 0.78) 100%),
+        linear-gradient(90deg, rgba(10, 11, 11, 0.68) 0%, rgba(10, 11, 11, 0.15) 45%, rgba(10, 11, 11, 0.52) 100%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px),
+        url('cover_art.png') center center / cover no-repeat,
+        #0b0d0c;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 48px 64px;
+      z-index: 20;
+    }
+
+    .home-header {
+      border-left: 4px solid #d6c38b;
+      padding-left: 18px;
+    }
+    .home-kicker {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #c2cfc0;
+      margin-bottom: 6px;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+    }
+    .home-title {
+      font-size: 36px;
+      letter-spacing: 3px;
+      color: #e8ede4;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.95);
+    }
+    .home-title span {
+      color: #d6c38b;
+    }
+    .home-version {
+      margin-top: 6px;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: #ffd60a;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+    }
+
+    .home-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+    }
+
+    .home-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .menu-card-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      background: rgba(24, 29, 25, 0.88);
+      border: 1px solid #445046;
+      border-left: 4px solid #6c7d6e;
+      padding: 15px 20px;
+      color: #e8ede4;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+    .menu-card-btn:hover {
+      background: rgba(42, 51, 44, 0.96);
+      border-color: #d6c38b;
+      border-left-color: #ffd60a;
+      transform: translateX(6px);
+    }
+    .menu-card-btn.primary {
+      background: rgba(45, 58, 42, 0.92);
+      border-color: #7c9473;
+      border-left-color: #ffd60a;
+    }
+    .menu-card-btn.primary:hover {
+      background: rgba(61, 79, 57, 0.98);
+    }
+    .menu-card-btn.models {
+      border-left-color: #d6b265;
+    }
+    .menu-card-title {
+      font-size: 17px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .menu-card-sub {
+      font-size: 11px;
+      color: #9fb098;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+    .menu-badge {
+      font-size: 10px;
+      background: #2c332d;
+      color: #d6c38b;
+      border: 1px solid #59665a;
+      padding: 2px 6px;
+      letter-spacing: 1px;
+    }
+
+    .home-briefing {
+      max-width: 380px;
+      background: rgba(18, 22, 19, 0.82);
+      border: 1px solid #353f37;
+      padding: 22px 24px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #b4c2ae;
+    }
+    .home-briefing h3 {
+      color: #d6c38b;
+      font-size: 13px;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #353f37;
+      padding-bottom: 6px;
+    }
+    .home-briefing ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .home-briefing li b {
+      color: #ffd60a;
+    }
+
+    .home-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #a8b5a2;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding-top: 14px;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    }
+    #homeStatusToast {
+      color: #ffd60a;
+      font-weight: bold;
+    }
+
+    /* ================= SETTINGS / PAUSE OVERLAY ================= */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 11, 0.94);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 30;
+      padding: 20px;
+    }
+    #overlay h1 { font-size: 24px; letter-spacing: 2px; margin-bottom: 6px; color: #d6c38b; }
+    #overlay p.sub { max-width: 720px; line-height: 1.4; color: #9fb098; margin-bottom: 14px; font-size: 12px; }
+
+    .tab-bar {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+      max-width: 740px;
+      margin-bottom: 0;
+    }
+    .tab-btn {
+      flex: 1;
+      background: #181c19;
+      color: #9fb098;
+      border: 1px solid #3c463e;
+      border-bottom: none;
+      padding: 10px 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .tab-btn:hover { background: #232925; color: #e8ede4; }
+    .tab-btn.active {
+      background: #232925;
+      color: #ffd60a;
+      border-color: #6b7a6d;
+    }
+
+    .settings-body {
+      width: 100%;
+      max-width: 740px;
+      height: 320px;
+      overflow-y: auto;
+      background: #232925;
+      border: 1px solid #6b7a6d;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    .setting-row {
+      display: grid;
+      grid-template-columns: 270px 1fr 85px;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .setting-row input[type="range"] { accent-color: #8ea382; cursor: pointer; }
+    .setting-val { color: #ffd60a; font-weight: bold; text-align: right; }
+
+    .toggle-pill {
+      background: #171b18;
+      color: #ffd60a;
+      border: 1px solid #59665a;
+      padding: 6px 14px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 140px;
+      text-align: center;
+    }
+    .toggle-pill:hover { background: #2f3831; }
+
+    .binds-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 8px 18px;
+      font-size: 12px;
+    }
+    .bind-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #171b18;
+      border: 1px solid #333b34;
+      padding: 6px 10px;
+    }
+    .bind-btn {
+      background: #2b332c;
+      color: #ffd60a;
+      border: 1px solid #59665a;
+      padding: 3px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      min-width: 108px;
+      text-align: center;
+    }
+    .bind-btn:hover { background: #3b473d; }
+    .bind-btn.listening { background: #8a6d1b; color: #fff; border-color: #ffd60a; }
+
+    .btn-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 780px; }
+    .action-btn {
+      background: #4b5d43;
+      color: #fff;
+      border: 1px solid #8ea382;
+      padding: 11px 18px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .action-btn:hover { background: #5e7454; }
+    .action-btn.fullscreen { background: #3a5266; border-color: #79a3c4; }
+    .action-btn.fullscreen:hover { background: #496780; }
+    .action-btn.danger { background: #5e2a26; border-color: #b85d56; }
+    .action-btn.danger:hover { background: #783530; }
+    .action-btn.secondary { background: #252b27; border-color: #5a665c; font-size: 12px; }
+    .action-btn.secondary:hover { background: #343d37; }
+
+    #saveToast {
+      font-size: 12px;
+      color: #4cd964;
+      height: 18px;
+      margin-bottom: 8px;
+    }
+    #weaponBanner {
+      position: fixed;
+      top: 16px;
+      left: 20px;
+      background: rgba(15, 18, 16, 0.78);
+      border: 1px solid rgba(185, 195, 175, 0.35);
+      padding: 8px 14px;
+      font-size: 12px;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="weaponBanner"></div>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- ================= HOME SCREEN ================= -->
+  <div id="homeScreen">
+    <div class="home-header">
+      <div class="home-kicker">THREE THEATERS &bull; ONE WAR</div>
+      <h1 class="home-title">CALL OF DUTY: <span>THREE-FRONT WAR</span></h1>
+      <div class="home-version">BETA 1.0 &bull; COMMAND HEADQUARTERS</div>
+    </div>
+
+    <div class="home-main">
+      <div class="home-menu">
+        <button id="homeCampaignBtn" class="menu-card-btn">
+          <div class="menu-card-title">CAMPAIGN <span class="menu-badge">27 MISSIONS</span></div>
+          <div class="menu-card-sub">Western Front &bull; Eastern Front &bull; Pacific Theater</div>
+        </button>
+
+        <button id="homeRangeBtn" class="menu-card-btn primary">
+          <div class="menu-card-title">FIRING RANGE</div>
+          <div class="menu-card-sub">Test all 20 WW2 firearms, 3 melee weapons, grenades &amp; movement</div>
+        </button>
+
+        <button id="homeRangeFsBtn" class="menu-card-btn">
+          <div class="menu-card-title">FIRING RANGE (FULLSCREEN)</div>
+          <div class="menu-card-sub">Launch training grounds in borderless fullscreen mode</div>
+        </button>
+
+        <button id="homeLoadModelsBtn" class="menu-card-btn models">
+          <div class="menu-card-title">LOAD MODELS FOLDER <span id="modelsBadge" class="menu-badge">LOCAL MODE</span></div>
+          <div class="menu-card-sub">Select your "models" folder to mount 3D .GLB weapons &amp; grenades</div>
+        </button>
+
+        <button id="homeSettingsBtn" class="menu-card-btn">
+          <div class="menu-card-title">SETTINGS</div>
+          <div class="menu-card-sub">Sensitivity, omni-movement behavior, keybinds, audio &amp; FOV</div>
+        </button>
+      </div>
+
+      <div class="home-briefing">
+        <h3>FIELD CONTROLS</h3>
+        <ul>
+          <li><b>1 / 2 / 3</b> &mdash; Primary, Secondary, Melee</li>
+          <li><b>[ / ]</b> &mdash; Cycle Weapons in Firing Range</li>
+          <li><b>V (Tap / Hold)</b> &mdash; Gun Butt / Equip Melee</li>
+          <li><b>G / F (4 / 5)</b> &mdash; Throw &amp; Cycle Lethals / Tacticals</li>
+          <li><b>Shift + C / Z</b> &mdash; Omni-Slide &amp; Omni-Dive</li>
+          <li><b>Space</b> &mdash; Jump, Mantle onto Crates, or Sprint-Vault</li>
+          <li><b>T</b> &mdash; Reset Range Targets &amp; Restock</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="home-footer">
+      <span id="homeStatusToast">Ready for deployment.</span>
+      <span>ENGINE: 2.5D METRIC RAYCASTER + THREE.JS VIEWMODELS</span>
+    </div>
+  </div>
+
+  <!-- ================= PAUSE / SETTINGS OVERLAY ================= -->
+  <div id="overlay">
+    <h1 id="overlayTitle">SETTINGS</h1>
+    <p class="sub">Settings auto-save locally • Click any keybind to assign Keyboard or Side Mouse Buttons (Mouse 4 / Mouse 5)</p>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="controls">CONTROLS</button>
+      <button class="tab-btn" data-tab="movement">MOVEMENT</button>
+      <button class="tab-btn" data-tab="keybinds">KEYBINDS</button>
+      <button class="tab-btn" data-tab="audio">AUDIO</button>
+      <button class="tab-btn" data-tab="graphics">GRAPHICS</button>
+    </div>
+
+    <div class="settings-body">
+      <!-- TAB 1: CONTROLS -->
+      <div id="tab-controls" class="tab-pane active">
+        <div class="setting-row">
+          <label for="sensSlider">Mouse Sensitivity (CoD 0.022°):</label>
+          <input id="sensSlider" type="range" min="1" max="20" step="0.25" />
+          <span id="sensVal" class="setting-val">6.00</span>
+        </div>
+        <div class="setting-row">
+          <label for="adsSlider">ADS Sensitivity Multiplier:</label>
+          <input id="adsSlider" type="range" min="0.2" max="2.0" step="0.05" />
+          <span id="adsVal" class="setting-val">1.00x</span>
+        </div>
+        <div class="setting-row">
+          <label>Invert Vertical Look (Y-Axis):</label>
+          <button id="invertYBtn" class="toggle-pill">OFF</button>
+          <span></span>
+        </div>
+      </div>
+
+      <!-- TAB 2: MOVEMENT -->
+      <div id="tab-movement" class="tab-pane">
+        <div class="setting-row">
+          <label>Omni-Sprint Behavior:</label>
+          <button id="sprintModeBtn" class="toggle-pill">HOLD</button>
+          <span style="font-size:11px;color:#9fb098">360° Sprint</span>
+        </div>
+        <div class="setting-row">
+          <label>Crouch / Slide Behavior:</label>
+          <button id="crouchModeBtn" class="toggle-pill">TOGGLE</button>
+          <span style="font-size:11px;color:#9fb098">Slide on Sprint</span>
+        </div>
+        <div class="setting-row">
+          <label>Prone / Dive Behavior:</label>
+          <button id="proneModeBtn" class="toggle-pill">TOGGLE</button>
+          <span style="font-size:11px;color:#9fb098">Dive on Sprint</span>
+        </div>
+        <div class="setting-row">
+          <label>Auto Omni-Sprint:</label>
+          <button id="autoSprintBtn" class="toggle-pill">OFF</button>
+          <span style="font-size:11px;color:#9fb098">No Tac Sprint</span>
+        </div>
+      </div>
+
+      <!-- TAB 3: KEYBINDS -->
+      <div id="tab-keybinds" class="tab-pane">
+        <div id="bindsGrid" class="binds-grid"></div>
+      </div>
+
+      <!-- TAB 4: AUDIO -->
+      <div id="tab-audio" class="tab-pane">
+        <div class="setting-row">
+          <label for="masterVolSlider">Master Volume:</label>
+          <input id="masterVolSlider" type="range" min="0" max="1" step="0.05" />
+          <span id="masterVolVal" class="setting-val">80%</span>
+        </div>
+        <div class="setting-row">
+          <label for="sfxVolSlider">Weapon, Melee & Explosion SFX:</label>
+          <input id="sfxVolSlider" type="range" min="0" max="1" step="0.05" />
+          <span id="sfxVolVal" class="setting-val">85%</span>
+        </div>
+        <div class="setting-row">
+          <label for="hitVolSlider">Hitmarker & Headshot Ping:</label>
+          <input id="hitVolSlider" type="range" min="0" max="1" step="0.05" />
+          <span id="hitVolVal" class="setting-val">90%</span>
+        </div>
+      </div>
+
+      <!-- TAB 5: GRAPHICS -->
+      <div id="tab-graphics" class="tab-pane">
+        <div class="setting-row">
+          <label for="fovSlider">Field of View (Horizontal):</label>
+          <input id="fovSlider" type="range" min="65" max="120" step="1" />
+          <span id="fovVal" class="setting-val">85°</span>
+        </div>
+        <div class="setting-row">
+          <label>Render Quality (Ray Density):</label>
+          <button id="rayStepBtn" class="toggle-pill">HIGH (2px)</button>
+          <span></span>
+        </div>
+        <div class="setting-row">
+          <label>Tactical Minimap:</label>
+          <button id="minimapBtn" class="toggle-pill">ON</button>
+          <span></span>
+        </div>
+        <div class="setting-row">
+          <label>Bullet Tracers:</label>
+          <button id="tracersBtn" class="toggle-pill">ON</button>
+          <span></span>
+        </div>
+        <div class="setting-row">
+          <label>Floating Damage Numbers:</label>
+          <button id="dmgNumBtn" class="toggle-pill">ON</button>
+          <span></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="saveToast"></div>
+
+    <div class="btn-row">
+      <button id="resumeBtn" class="action-btn">RESUME</button>
+      <button id="fullscreenResumeBtn" class="action-btn fullscreen">RESUME (FULLSCREEN)</button>
+      <button id="restartLevelBtn" class="action-btn secondary">RESTART LEVEL</button>
+      <button id="exportBtn" class="action-btn secondary">SAVE CONFIG (.JSON)</button>
+      <button id="importBtn" class="action-btn secondary">LOAD CONFIG</button>
+      <button id="resetSettingsBtn" class="action-btn secondary">RESET DEFAULTS</button>
+      <button id="quitToHomeBtn" class="action-btn danger">QUIT TO HOME</button>
+      <input id="modelsFolderInput" type="file" webkitdirectory directory multiple style="display:none" />
+      <input id="importFileInput" type="file" accept=".json" style="display:none" />
+    </div>
+  </div>
+
+  <!-- Core Engine Scripts -->
+  <script src="constants.js"></script>
+  <script src="player_controller.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+// Class Arcade 3D patch: weapon models are too big to live inside the game
+// file, so they are stored in the class database and fetched on demand.
+(function(){
+  if(!window.THREE || !THREE.GLTFLoader || !THREE.GLTFLoader.prototype) return;
+  var DB = 'https://class-arcade-default-rtdb.firebaseio.com';
+  var cache = {};
+  function slugFor(url){
+    var p = String(url);
+    var i = p.indexOf('models/');
+    if(i >= 0) p = p.slice(i + 'models/'.length);
+    return p.replace(/\.glb$/i, '').replace(/\//g, '--');
+  }
+  var origLoad = THREE.GLTFLoader.prototype.load;
+  THREE.GLTFLoader.prototype.load = function(url, onLoad, onProgress, onError){
+    var self = this, args = arguments;
+    if(typeof url !== 'string' || url.indexOf('models/') === -1 || url.indexOf('data:') === 0){
+      return origLoad.apply(self, args);
+    }
+    var slug = slugFor(url);
+    if(!cache[slug]){
+      cache[slug] = fetch(DB + '/gamemodels/' + slug + '.json')
+        .then(function(r){ return r.json(); })
+        .catch(function(){ return null; });
+    }
+    cache[slug].then(function(dataUrl){
+      if(typeof dataUrl === 'string' && dataUrl.indexOf('data:') === 0){
+        origLoad.call(self, dataUrl, onLoad, onProgress, onError);
+      } else {
+        origLoad.apply(self, args);
+      }
+    });
+  };
+})();
+
+</script>
+  <script src="asset_manager.js"></script>
+  <script src="renderer_25d.js"></script>
+
+  <!-- Isolated Level Scripts -->
+  <script src="range.js"></script>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('gameCanvas');
+      const homeScreen = document.getElementById('homeScreen');
+      const homeStatusToast = document.getElementById('homeStatusToast');
+      const overlay = document.getElementById('overlay');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const weaponBanner = document.getElementById('weaponBanner');
+      const saveToast = document.getElementById('saveToast');
+
+      const resumeBtn = document.getElementById('resumeBtn');
+      const fullscreenResumeBtn = document.getElementById('fullscreenResumeBtn');
+      const restartLevelBtn = document.getElementById('restartLevelBtn');
+      const quitToHomeBtn = document.getElementById('quitToHomeBtn');
+
+      const STORAGE_KEY = 'WW2_FRONTS_SETTINGS_V5';
+      let toastTimeout = null;
+      function showToast(msg, persist = false) {
+        saveToast.textContent = msg;
+        clearTimeout(toastTimeout);
+        if (!persist) {
+          toastTimeout = setTimeout(() => { saveToast.textContent = ''; }, 2800);
+        }
+      }
+
+      function deepMergeSettings(saved) {
+        const base = JSON.parse(JSON.stringify(WW2.DEFAULT_SETTINGS));
+        if (!saved) return base;
+        if (saved.controls) Object.assign(base.controls, saved.controls);
+        if (saved.movement) Object.assign(base.movement, saved.movement);
+        if (saved.audio) Object.assign(base.audio, saved.audio);
+        if (saved.graphics) Object.assign(base.graphics, saved.graphics);
+        if (saved.bindings) Object.assign(base.bindings, saved.bindings);
+        return base;
+      }
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return deepMergeSettings(raw ? JSON.parse(raw) : null);
+        } catch (e) {
+          return deepMergeSettings(null);
+        }
+      }
+
+      let settings = loadSettings();
+      function saveSettings(msg = 'Settings saved locally') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+          showToast(msg);
+        } catch (e) {
+          showToast('Local storage blocked — use Save Config (.json)');
+        }
+      }
+
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+      });
+
+      const sensSlider = document.getElementById('sensSlider');
+      const adsSlider = document.getElementById('adsSlider');
+      const sensVal = document.getElementById('sensVal');
+      const adsVal = document.getElementById('adsVal');
+      const invertYBtn = document.getElementById('invertYBtn');
+
+      const sprintModeBtn = document.getElementById('sprintModeBtn');
+      const crouchModeBtn = document.getElementById('crouchModeBtn');
+      const proneModeBtn = document.getElementById('proneModeBtn');
+      const autoSprintBtn = document.getElementById('autoSprintBtn');
+
+      const masterVolSlider = document.getElementById('masterVolSlider');
+      const sfxVolSlider = document.getElementById('sfxVolSlider');
+      const hitVolSlider = document.getElementById('hitVolSlider');
+      const masterVolVal = document.getElementById('masterVolVal');
+      const sfxVolVal = document.getElementById('sfxVolVal');
+      const hitVolVal = document.getElementById('hitVolVal');
+
+      const fovSlider = document.getElementById('fovSlider');
+      const fovVal = document.getElementById('fovVal');
+      const rayStepBtn = document.getElementById('rayStepBtn');
+      const minimapBtn = document.getElementById('minimapBtn');
+      const tracersBtn = document.getElementById('tracersBtn');
+      const dmgNumBtn = document.getElementById('dmgNumBtn');
+
+      const bindsGrid = document.getElementById('bindsGrid');
+      const BIND_LABELS = [
+        ['moveForward', 'Move Forward'],
+        ['moveBack', 'Move Backward'],
+        ['moveLeft', 'Move Left'],
+        ['moveRight', 'Move Right'],
+        ['jumpMantle', 'Jump / Mantle / Vault'],
+        ['sprint', 'Omni-Sprint'],
+        ['crouchSlide', 'Crouch / Omni-Slide'],
+        ['diveProne', 'Prone / Omni-Dive'],
+        ['reload', 'Reload'],
+        ['quickMelee', 'Quick Melee (Gun Butt)'],
+        ['equipMelee', 'Equip Melee Weapon (Slot 3)'],
+        ['lethal', 'Lethal Equipment'],
+        ['tactical', 'Tactical Equipment'],
+        ['slot1', 'Slot 1 (Primary)'],
+        ['slot2', 'Slot 2 (Secondary)'],
+        ['slot3', 'Slot 3 (Melee Weapon)'],
+        ['cycleLethal', 'Cycle Lethal'],
+        ['cycleTactical', 'Cycle Tactical'],
+        ['quickSwap', 'Quick Swap'],
+        ['resetTargets', 'Reset & Restock Range'],
+        ['toggleMinimap', 'Toggle Minimap']
+      ];
+
+      let listeningAction = null;
+
+      function formatKeyCode(code) {
+        const mouseLabels = {
+          Mouse1: 'MOUSE 3',
+          Mouse2: 'MOUSE 2',
+          Mouse3: 'MOUSE 4',
+          Mouse4: 'MOUSE 5'
+        };
+        if (mouseLabels[code]) return mouseLabels[code];
+
+        return code
+          .replace(/^Key/, '')
+          .replace(/^Digit/, '')
+          .replace('ShiftLeft', 'L-SHIFT')
+          .replace('ShiftRight', 'R-SHIFT')
+          .replace('ControlLeft', 'L-CTRL')
+          .replace('ControlRight', 'R-CTRL')
+          .replace('AltLeft', 'L-ALT')
+          .replace('AltRight', 'R-ALT')
+          .replace('MetaLeft', 'L-CMD')
+          .replace('MetaRight', 'R-CMD')
+          .replace('Space', 'SPACE');
+      }
+
+      function renderSettingsUI() {
+        sensSlider.value = settings.controls.mouseSens;
+        sensVal.textContent = Number(settings.controls.mouseSens).toFixed(2);
+        adsSlider.value = settings.controls.adsSensMult;
+        adsVal.textContent = Number(settings.controls.adsSensMult).toFixed(2) + 'x';
+        invertYBtn.textContent = settings.controls.invertY ? 'ON' : 'OFF';
+
+        sprintModeBtn.textContent = settings.movement.sprintBehavior;
+        crouchModeBtn.textContent = settings.movement.crouchBehavior;
+        proneModeBtn.textContent = settings.movement.proneBehavior;
+        autoSprintBtn.textContent = settings.movement.autoOmniSprint ? 'ON' : 'OFF';
+
+        masterVolSlider.value = settings.audio.masterVolume;
+        masterVolVal.textContent = Math.round(settings.audio.masterVolume * 100) + '%';
+        sfxVolSlider.value = settings.audio.sfxVolume;
+        sfxVolVal.textContent = Math.round(settings.audio.sfxVolume * 100) + '%';
+        hitVolSlider.value = settings.audio.hitmarkerVolume;
+        hitVolVal.textContent = Math.round(settings.audio.hitmarkerVolume * 100) + '%';
+
+        fovSlider.value = settings.graphics.fov;
+        fovVal.textContent = settings.graphics.fov + '°';
+        const rayLabels = { 1: 'ULTRA (1px)', 2: 'HIGH (2px)', 3: 'PERF (3px)' };
+        rayStepBtn.textContent = rayLabels[settings.graphics.rayStepPx] || 'HIGH (2px)';
+        minimapBtn.textContent = settings.graphics.showMinimap ? 'ON' : 'OFF';
+        tracersBtn.textContent = settings.graphics.showTracers ? 'ON' : 'OFF';
+        dmgNumBtn.textContent = settings.graphics.showDamageNumbers ? 'ON' : 'OFF';
+
+        bindsGrid.innerHTML = '';
+        BIND_LABELS.forEach(([action, label]) => {
+          const row = document.createElement('div');
+          row.className = 'bind-item';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = label;
+
+          const btn = document.createElement('button');
+          btn.className = 'bind-btn' + (listeningAction === action ? ' listening' : '');
+          btn.textContent = listeningAction === action ? 'PRESS KEY/BTN...' : formatKeyCode(settings.bindings[action]);
+          btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            listeningAction = action;
+            renderSettingsUI();
+          });
+
+          row.appendChild(nameSpan);
+          row.appendChild(btn);
+          bindsGrid.appendChild(row);
+        });
+      }
+
+      sensSlider.addEventListener('input', () => {
+        settings.controls.mouseSens = parseFloat(sensSlider.value);
+        sensVal.textContent = settings.controls.mouseSens.toFixed(2);
+        saveSettings();
+      });
+      adsSlider.addEventListener('input', () => {
+        settings.controls.adsSensMult = parseFloat(adsSlider.value);
+        adsVal.textContent = settings.controls.adsSensMult.toFixed(2) + 'x';
+        saveSettings();
+      });
+      invertYBtn.addEventListener('click', () => {
+        settings.controls.invertY = !settings.controls.invertY;
+        renderSettingsUI();
+        saveSettings();
+      });
+
+      sprintModeBtn.addEventListener('click', () => {
+        settings.movement.sprintBehavior = settings.movement.sprintBehavior === 'HOLD' ? 'TOGGLE' : 'HOLD';
+        renderSettingsUI();
+        saveSettings();
+      });
+      crouchModeBtn.addEventListener('click', () => {
+        settings.movement.crouchBehavior = settings.movement.crouchBehavior === 'TOGGLE' ? 'HOLD' : 'TOGGLE';
+        renderSettingsUI();
+        saveSettings();
+      });
+      proneModeBtn.addEventListener('click', () => {
+        settings.movement.proneBehavior = settings.movement.proneBehavior === 'TOGGLE' ? 'HOLD' : 'TOGGLE';
+        renderSettingsUI();
+        saveSettings();
+      });
+      autoSprintBtn.addEventListener('click', () => {
+        settings.movement.autoOmniSprint = !settings.movement.autoOmniSprint;
+        renderSettingsUI();
+        saveSettings();
+      });
+
+      masterVolSlider.addEventListener('input', () => {
+        settings.audio.masterVolume = parseFloat(masterVolSlider.value);
+        masterVolVal.textContent = Math.round(settings.audio.masterVolume * 100) + '%';
+        saveSettings();
+      });
+      sfxVolSlider.addEventListener('input', () => {
+        settings.audio.sfxVolume = parseFloat(sfxVolSlider.value);
+        sfxVolVal.textContent = Math.round(settings.audio.sfxVolume * 100) + '%';
+        saveSettings();
+      });
+      hitVolSlider.addEventListener('input', () => {
+        settings.audio.hitmarkerVolume = parseFloat(hitVolSlider.value);
+        hitVolVal.textContent = Math.round(settings.audio.hitmarkerVolume * 100) + '%';
+        saveSettings();
+      });
+
+      fovSlider.addEventListener('input', () => {
+        settings.graphics.fov = parseInt(fovSlider.value, 10);
+        fovVal.textContent = settings.graphics.fov + '°';
+        saveSettings();
+      });
+      rayStepBtn.addEventListener('click', () => {
+        settings.graphics.rayStepPx = (settings.graphics.rayStepPx % 3) + 1;
+        renderSettingsUI();
+        saveSettings();
+      });
+      minimapBtn.addEventListener('click', () => {
+        settings.graphics.showMinimap = !settings.graphics.showMinimap;
+        renderSettingsUI();
+        saveSettings();
+      });
+      tracersBtn.addEventListener('click', () => {
+        settings.graphics.showTracers = !settings.graphics.showTracers;
+        renderSettingsUI();
+        saveSettings();
+      });
+      dmgNumBtn.addEventListener('click', () => {
+        settings.graphics.showDamageNumbers = !settings.graphics.showDamageNumbers;
+        renderSettingsUI();
+        saveSettings();
+      });
+
+      document.getElementById('exportBtn').addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ww2_fronts_settings.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Exported ww2_fronts_settings.json');
+      });
+
+      const importFileInput = document.getElementById('importFileInput');
+      document.getElementById('importBtn').addEventListener('click', () => importFileInput.click());
+      importFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            settings = deepMergeSettings(JSON.parse(reader.result));
+            saveSettings('Loaded config file & saved locally');
+            renderSettingsUI();
+          } catch (err) {
+            showToast('Invalid JSON settings file');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      document.getElementById('resetSettingsBtn').addEventListener('click', () => {
+        settings = deepMergeSettings(null);
+        listeningAction = null;
+        saveSettings('Reset to defaults');
+        renderSettingsUI();
+      });
+
+      renderSettingsUI();
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // ================= AUDIO SYNTH =================
+      let audioCtx = null;
+      function getAudioContext() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+      }
+
+      function playShotSound(rpm) {
+        const vol = settings.audio.masterVolume * settings.audio.sfxVolume * 0.22;
+        if (vol <= 0.001) return;
+        try {
+          const ctx = getAudioContext();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(rpm < 100 ? 110 : 165, now);
+          osc.frequency.exponentialRampToValueAtTime(32, now + 0.09);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } catch (e) {}
+      }
+
+      function playMeleeSound(isBlade, hitTarget) {
+        const vol = settings.audio.masterVolume * settings.audio.sfxVolume * 0.28;
+        if (vol <= 0.001) return;
+        try {
+          const ctx = getAudioContext();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = isBlade ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(hitTarget ? (isBlade ? 340 : 150) : (isBlade ? 520 : 240), now);
+          osc.frequency.exponentialRampToValueAtTime(hitTarget ? 45 : 90, now + 0.12);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.13);
+        } catch (e) {}
+      }
+
+      function playExplosionSound(isFlash) {
+        const vol = settings.audio.masterVolume * settings.audio.sfxVolume * 0.34;
+        if (vol <= 0.001) return;
+        try {
+          const ctx = getAudioContext();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = isFlash ? 'sine' : 'sawtooth';
+          osc.frequency.setValueAtTime(isFlash ? 2400 : 95, now);
+          osc.frequency.exponentialRampToValueAtTime(isFlash ? 1650 : 22, now + (isFlash ? 0.55 : 0.35));
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + (isFlash ? 0.58 : 0.38));
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + (isFlash ? 0.60 : 0.40));
+        } catch (e) {}
+      }
+
+      function playPingSound(isHeadshot) {
+        const vol = settings.audio.masterVolume * settings.audio.hitmarkerVolume * 0.18;
+        if (vol <= 0.001) return;
+        try {
+          const ctx = getAudioContext();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(isHeadshot ? 1950 : 1380, now);
+          osc.frequency.exponentialRampToValueAtTime(isHeadshot ? 1250 : 860, now + 0.14);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } catch (e) {}
+      }
+
+      // ================= SHARED CORE ENGINE & SWAPPABLE LEVEL LOADER =================
+      const assets = new WW2.AssetManager();
+      assets.preloadAllWeapons();
+
+      const homeLoadModelsBtn = document.getElementById('homeLoadModelsBtn');
+      const modelsBadge = document.getElementById('modelsBadge');
+      const modelsFolderInput = document.getElementById('modelsFolderInput');
+      if (window.location.protocol !== 'file:') {
+        homeLoadModelsBtn.style.display = 'none';
+      } else {
+        homeStatusToast.textContent = 'Local mode: Click "LOAD MODELS FOLDER" and select your models folder.';
+      }
+      homeLoadModelsBtn.addEventListener('click', () => modelsFolderInput.click());
+      modelsFolderInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          assets.loadModelsFromFileList(e.target.files, (msg) => {
+            homeStatusToast.textContent = msg;
+            modelsBadge.textContent = msg.startsWith('Ready!') ? 'MODELS READY' : 'LOADING...';
+          });
+        }
+      });
+
+      const renderer = new WW2.Renderer25D(canvas, assets);
+      let activeEnv = null;
+      let player = null;
+
+      const firearmIds = Object.keys(WW2.WEAPONS).filter(id => WW2.WEAPONS[id].category !== 'MELEE');
+      const meleeIds = Object.keys(WW2.WEAPONS).filter(id => WW2.WEAPONS[id].category === 'MELEE');
+      let firearmCycleIndex = 0;
+      let meleeCycleIndex = 0;
+
+      function applyDefaultLoadout(targetPlayer) {
+        targetPlayer.equipWeapon('thompson_m1928', 0);
+        targetPlayer.equipWeapon('colt_m1911a1', 1);
+        targetPlayer.equipWeapon('trench_knife', 2);
+        targetPlayer.switchSlot(0);
+      }
+
+      function loadLevel(levelKey, loadoutOverride = null) {
+        const LevelClass = (WW2.LEVELS && WW2.LEVELS[levelKey]) || WW2.RangeEnvironment;
+        activeEnv = new LevelClass();
+
+        const sp = activeEnv.spawn || { x: 14.0, z: 5.0, yaw: Math.PI / 2 };
+        player = new WW2.PlayerController(sp.x, sp.z, sp.yaw);
+
+        if (loadoutOverride) {
+          if (loadoutOverride.primary) player.equipWeapon(loadoutOverride.primary, 0);
+          if (loadoutOverride.secondary) player.equipWeapon(loadoutOverride.secondary, 1);
+          if (loadoutOverride.melee) player.equipWeapon(loadoutOverride.melee, 2);
+          player.switchSlot(0);
+        } else {
+          applyDefaultLoadout(player);
+        }
+
+        weaponBanner.innerHTML = activeEnv.bannerHint;
+      }
+
+      function handleEnvEvent(evt) {
+        if (!evt) return;
+        if (evt.kind === 'EXPLOSION') playExplosionSound(false);
+        if (evt.kind === 'FLASHBANG') playExplosionSound(true);
+        if (evt.kind === 'HITMARKER' && evt.result) {
+          renderer.triggerHitMarker(evt.result);
+          playPingSound(false);
+        }
+      }
+
+      function handleEquipAction(action) {
+        if (activeEnv && player) {
+          activeEnv.spawnEquipmentAction(action, player, handleEnvEvent);
+        }
+      }
+
+      function handleMeleeAction(meleeData) {
+        if (!activeEnv) return;
+        const result = activeEnv.performMeleeAttack(meleeData);
+        playMeleeSound(meleeData.isDedicatedMelee, result.hit);
+        if (result.hit) {
+          renderer.triggerHitMarker(result);
+          playPingSound(result.headshot);
+        }
+      }
+
+      function isStandaloneApp() {
+        return Boolean(
+          window.__TAURI__ ||
+          (window.process && window.process.versions && window.process.versions.electron) ||
+          window.matchMedia('(display-mode: standalone)').matches
+        );
+      }
+
+      function syncOverlayMode() {
+        const inSession = Boolean(activeEnv && player);
+        overlayTitle.textContent = inSession ? `${activeEnv.name} — PAUSED` : 'SETTINGS';
+        resumeBtn.textContent = inSession ? 'RESUME' : 'BACK TO HOME';
+        fullscreenResumeBtn.style.display = inSession ? 'inline-block' : 'none';
+        restartLevelBtn.style.display = inSession ? 'inline-block' : 'none';
+        quitToHomeBtn.style.display = inSession ? 'inline-block' : 'none';
+      }
+
+      function requestCanvasLock() {
+        try {
+          const res = canvas.requestPointerLock();
+          if (res && typeof res.catch === 'function') {
+            res.catch(() => {});
+          }
+        } catch (e) {}
+      }
+
+      function lockIntoSession(useFullscreen) {
+        listeningAction = null;
+        renderSettingsUI();
+        homeScreen.style.display = 'none';
+        overlay.style.display = 'none';
+        weaponBanner.style.display = 'block';
+        if (activeEnv) {
+          weaponBanner.innerHTML = '<b style="color:#ffd60a">CLICK SCREEN TO LOCK MOUSE</b> &nbsp;|&nbsp; ' + activeEnv.bannerHint;
+        }
+
+        // Lock synchronously during the user click before any async fullscreen/keyboard promises
+        requestCanvasLock();
+
+        if (useFullscreen && !isStandaloneApp() && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+        if (navigator.keyboard && typeof navigator.keyboard.lock === 'function') {
+          navigator.keyboard.lock().catch(() => {});
+        }
+      }
+
+      function launchRange(useFullscreen) {
+        loadLevel('range');
+        lockIntoSession(useFullscreen);
+      }
+
+      function quitToHome() {
+        activeEnv = null;
+        player = null;
+        weaponBanner.style.display = 'none';
+        overlay.style.display = 'none';
+        homeScreen.style.display = 'flex';
+        try {
+          if (document.pointerLockElement) document.exitPointerLock();
+        } catch (e) {}
+      }
+
+      // ================= HOME SCREEN BUTTONS =================
+      document.getElementById('homeCampaignBtn').addEventListener('click', () => {
+        window.location.href = 'campaign.html';
+      });
+
+      document.getElementById('homeRangeBtn').addEventListener('click', () => launchRange(false));
+      document.getElementById('homeRangeFsBtn').addEventListener('click', () => launchRange(true));
+
+      document.getElementById('homeSettingsBtn').addEventListener('click', () => {
+        syncOverlayMode();
+        overlay.style.display = 'flex';
+      });
+
+      // ================= PAUSE / SETTINGS OVERLAY BUTTONS =================
+      resumeBtn.addEventListener('click', () => {
+        if (activeEnv && player) {
+          lockIntoSession(false);
+        } else {
+          overlay.style.display = 'none';
+        }
+      });
+
+      fullscreenResumeBtn.addEventListener('click', () => {
+        if (activeEnv && player) {
+          lockIntoSession(true);
+        }
+      });
+
+      restartLevelBtn.addEventListener('click', () => {
+        if (!activeEnv) return;
+        loadLevel(activeEnv.id);
+        lockIntoSession(false);
+      });
+
+      quitToHomeBtn.addEventListener('click', quitToHome);
+
+      // Click-to-lock fallback if browser cooldown prevented auto-lock
+      canvas.addEventListener('click', () => {
+        if (activeEnv && player && document.pointerLockElement !== canvas) {
+          requestCanvasLock();
+        }
+      });
+
+      // ================= POINTER LOCK & INPUT =================
+      document.addEventListener('pointerlockchange', () => {
+        const locked = document.pointerLockElement === canvas;
+        if (locked) {
+          homeScreen.style.display = 'none';
+          overlay.style.display = 'none';
+          weaponBanner.style.display = 'block';
+          if (activeEnv) {
+            weaponBanner.innerHTML = activeEnv.bannerHint;
+          }
+        } else if (activeEnv && player) {
+          weaponBanner.style.display = 'none';
+          syncOverlayMode();
+          overlay.style.display = 'flex';
+          player.keys = {};
+          player.mouseDown = false;
+          player.rightMouseDown = false;
+          player.holdingEquipSlot = null;
+          player.meleeHoldActive = false;
+          player.meleeHoldTimer = 0;
+          player.meleeHoldTriggered = false;
+          try {
+            if (navigator.keyboard && typeof navigator.keyboard.unlock === 'function') {
+              navigator.keyboard.unlock();
+            }
+          } catch (e) {}
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement !== canvas || !player) return;
+        player.applyMouseLook(e.movementX, e.movementY, settings);
+      });
+
+      function dispatchBoundDown(code) {
+        if (!player || !activeEnv) return;
+        const binds = settings.bindings;
+        const alreadyHeld = Boolean(player.keys[code]);
+        player.keys[code] = true;
+
+        if (!alreadyHeld) {
+          if (code === binds.jumpMantle) player.handleJumpOrMantleInput(activeEnv);
+          if (code === binds.sprint) player.handleSprintKeyDown(settings);
+          if (code === binds.crouchSlide) player.handleCrouchKeyDown(settings);
+          if (code === binds.diveProne) player.handleProneKeyDown(settings);
+          if (code === binds.reload) player.startReload();
+          if (code === binds.quickMelee || code === binds.equipMelee) {
+            player.handleMeleeInputDown(code, settings, handleMeleeAction);
+          }
+          if (code === binds.lethal) player.handleLethalKeyDown(handleEquipAction);
+          if (code === binds.tactical) player.handleTacticalKeyDown();
+          if (code === binds.slot1) player.switchSlot(0);
+          if (code === binds.slot2) player.switchSlot(1);
+          if (code === binds.slot3) player.switchSlot(2);
+          if (code === binds.cycleLethal) player.cycleLethal();
+          if (code === binds.cycleTactical) player.cycleTactical();
+          if (code === binds.quickSwap) player.quickSwapWeapon();
+          if (code === binds.resetTargets && activeEnv.allowTargetReset) {
+            activeEnv.reset();
+            player.restockEquipment();
+          }
+          if (code === binds.toggleMinimap) {
+            settings.graphics.showMinimap = !settings.graphics.showMinimap;
+            renderSettingsUI();
+            saveSettings();
+          }
+
+          if (activeEnv.allowWeaponCycle && (code === 'BracketRight' || code === 'BracketLeft')) {
+            const dir = code === 'BracketRight' ? 1 : -1;
+            if (player.activeSlot === 2) {
+              meleeCycleIndex = (meleeCycleIndex + dir + meleeIds.length) % meleeIds.length;
+              player.equipWeapon(meleeIds[meleeCycleIndex], 2);
+            } else {
+              firearmCycleIndex = (firearmCycleIndex + dir + firearmIds.length) % firearmIds.length;
+              player.equipWeapon(firearmIds[firearmCycleIndex], player.activeSlot);
+            }
+          }
+        }
+      }
+
+      function dispatchBoundUp(code) {
+        if (!player) return;
+        const binds = settings.bindings;
+        player.keys[code] = false;
+
+        if (code === binds.crouchSlide) player.handleCrouchKeyUp(settings);
+        if (code === binds.diveProne) player.handleProneKeyUp(settings);
+        if (code === binds.quickMelee || code === binds.equipMelee) {
+          player.handleMeleeInputUp(code, settings, handleMeleeAction);
+        }
+        if (code === binds.lethal) player.handleLethalKeyUp(handleEquipAction);
+        if (code === binds.tactical) player.handleTacticalKeyUp(handleEquipAction);
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (listeningAction) {
+          e.preventDefault();
+          if (e.code !== 'Escape') {
+            settings.bindings[listeningAction] = e.code;
+            saveSettings('Keybind updated');
+          }
+          listeningAction = null;
+          renderSettingsUI();
+          return;
+        }
+
+        if (document.pointerLockElement !== canvas) return;
+        e.preventDefault();
+        dispatchBoundDown(e.code);
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (document.pointerLockElement !== canvas) return;
+        e.preventDefault();
+        dispatchBoundUp(e.code);
+      });
+
+      window.addEventListener('mousedown', (e) => {
+        if (listeningAction && e.button >= 1) {
+          e.preventDefault();
+          settings.bindings[listeningAction] = 'Mouse' + e.button;
+          listeningAction = null;
+          saveSettings('Mouse button bound');
+          renderSettingsUI();
+          return;
+        }
+
+        if (document.pointerLockElement !== canvas || !player) return;
+        e.preventDefault();
+        if (e.button === 0) player.mouseDown = true;
+        if (e.button === 2) player.rightMouseDown = true;
+        if (e.button >= 1) dispatchBoundDown('Mouse' + e.button);
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (document.pointerLockElement !== canvas || !player) return;
+        e.preventDefault();
+        if (e.button === 0) player.mouseDown = false;
+        if (e.button === 2) player.rightMouseDown = false;
+        if (e.button >= 1) dispatchBoundUp('Mouse' + e.button);
+      });
+
+      window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      // ================= MAIN LOOP =================
+      let lastTime = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        if (activeEnv && player) {
+          player.update(
+            dt,
+            settings,
+            activeEnv,
+            (shotData) => {
+              renderer.triggerMuzzleFlash();
+              playShotSound(shotData.weapon.rpm);
+              const result = activeEnv.fireHitscan(shotData);
+              if (result.hit) {
+                renderer.triggerHitMarker(result);
+                playPingSound(result.headshot);
+              }
+            },
+            handleEquipAction,
+            handleMeleeAction
+          );
+
+          activeEnv.update(dt, now / 1000, player, handleEnvEvent);
+          renderer.render(dt, player, activeEnv, settings);
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

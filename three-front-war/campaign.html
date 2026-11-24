@@ -1,0 +1,2441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Campaign Mission Select — Call of Duty: Three-Front War</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080a0c;
+      color: #e8ede4;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    canvas#warMapCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* ================= TOP NAVIGATION BAR (CoD: WWII STYLE) ================= */
+    .top-bar {
+      position: fixed;
+      top: 22px;
+      left: 36px;
+      right: 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .key-cap {
+      background: rgba(24, 28, 30, 0.9);
+      border: 1px solid #6b767a;
+      color: #d0d8da;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 7px;
+      border-radius: 2px;
+      letter-spacing: 1px;
+    }
+
+    .theater-tab {
+      background: rgba(16, 19, 21, 0.76);
+      border: 1px solid transparent;
+      color: #889498;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .theater-tab:hover {
+      color: #e8ede4;
+      background: rgba(30, 36, 40, 0.88);
+    }
+    .theater-tab.active {
+      color: #ffffff;
+      border-color: rgba(214, 195, 139, 0.65);
+      background: rgba(28, 33, 36, 0.94);
+      box-shadow: 0 0 14px rgba(214, 195, 139, 0.16);
+    }
+
+    .top-right-meta {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+      color: #a8b4b8;
+      background: rgba(14, 17, 19, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 6px 14px;
+    }
+    .top-right-meta b {
+      color: #d6c38b;
+    }
+
+    /* ================= LEFT DOSSIER PANEL ================= */
+    .dossier-panel {
+      position: fixed;
+      top: 78px;
+      left: 36px;
+      width: 410px;
+      background: linear-gradient(180deg, rgba(16, 19, 21, 0.92) 0%, rgba(12, 14, 16, 0.88) 100%);
+      border: 1px solid rgba(160, 175, 180, 0.28);
+      border-left: 4px solid #d6c38b;
+      padding: 20px 22px;
+      z-index: 15;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px);
+    }
+
+    .dossier-kicker {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #d6c38b;
+      margin-bottom: 6px;
+    }
+    .status-pill {
+      background: rgba(52, 199, 89, 0.16);
+      border: 1px solid rgba(52, 199, 89, 0.55);
+      color: #6ee787;
+      font-size: 10px;
+      padding: 2px 7px;
+      letter-spacing: 1px;
+    }
+
+    .dossier-title {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      color: #ffffff;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .dossier-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+      padding: 10px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 12px;
+      font-size: 11px;
+    }
+    .meta-label {
+      color: #849296;
+      letter-spacing: 1px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .meta-val {
+      color: #e8ede4;
+      font-weight: bold;
+    }
+
+    .dossier-summary {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #c5d0d3;
+      margin-bottom: 16px;
+      min-height: 76px;
+    }
+
+    .dossier-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .deploy-btn {
+      flex: 1;
+      background: rgba(58, 74, 54, 0.92);
+      border: 1px solid #96b08e;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .deploy-btn:hover {
+      background: rgba(78, 99, 73, 0.98);
+      border-color: #ffd60a;
+    }
+    .back-btn {
+      background: rgba(26, 30, 32, 0.92);
+      border: 1px solid #596569;
+      color: #d0d8da;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    .back-btn:hover {
+      background: rgba(44, 50, 54, 0.98);
+      border-color: #d6c38b;
+      color: #fff;
+    }
+
+    /* ================= LEGEND BADGE ================= */
+    .map-legend {
+      position: fixed;
+      top: 78px;
+      right: 36px;
+      background: rgba(14, 17, 19, 0.88);
+      border: 1px solid rgba(160, 175, 180, 0.25);
+      padding: 10px 14px;
+      font-size: 11px;
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #c2ced2;
+    }
+    .swatch {
+      width: 15px;
+      height: 4px;
+      display: inline-block;
+    }
+    .swatch-box {
+      width: 15px;
+      height: 10px;
+      display: inline-block;
+    }
+
+    /* ================= BOTTOM MISSION STRIP (CoD: WWII CAROUSEL) ================= */
+    .bottom-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(10, 12, 14, 0) 0%, rgba(10, 12, 14, 0.88) 28%, rgba(8, 10, 12, 0.97) 100%);
+      padding: 26px 36px 16px 36px;
+      z-index: 15;
+    }
+
+    .strip-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .scroll-arrow {
+      background: rgba(22, 26, 29, 0.9);
+      border: 1px solid #4e595e;
+      color: #d6c38b;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: bold;
+      width: 34px;
+      height: 86px;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-bottom: 34px;
+    }
+    .scroll-arrow:hover {
+      background: rgba(42, 49, 54, 0.98);
+      border-color: #ffd60a;
+    }
+
+    .mission-strip {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      padding: 6px 4px 8px 4px;
+      flex: 1;
+      scrollbar-width: none;
+    }
+    .mission-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mission-card {
+      flex: 0 0 176px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.14s ease;
+    }
+    .mission-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .thumb-frame {
+      position: relative;
+      width: 176px;
+      height: 88px;
+      border: 1px solid #4a5458;
+      background: #14181a;
+      overflow: hidden;
+      transition: border-color 0.14s ease, box-shadow 0.14s ease;
+    }
+    .mission-card.selected .thumb-frame {
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.35);
+    }
+    .mission-card:hover .thumb-frame {
+      border-color: #d6c38b;
+    }
+
+    .thumb-frame canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .thumb-num {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 10px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(0, 0, 0, 0.65);
+      padding: 1px 5px;
+    }
+
+    .card-divider {
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.14);
+      margin: 7px 0 5px 0;
+      transition: background 0.14s ease;
+    }
+    .mission-card.selected .card-divider {
+      background: #ffffff;
+      height: 3px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.8px;
+      color: #a4b0b4;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 174px;
+    }
+    .mission-card.selected .card-title {
+      color: #ffffff;
+      font-size: 11.5px;
+    }
+
+    .card-date {
+      font-size: 10px;
+      color: #788488;
+      margin-top: 2px;
+      text-align: center;
+    }
+    .mission-card.selected .card-date {
+      color: #d6c38b;
+    }
+
+    .footer-prompts {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      color: #96a2a6;
+    }
+    .prompt-group {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+    }
+    .prompt-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .circle-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: bold;
+      background: #23292c;
+      border: 1px solid #7c888c;
+      color: #fff;
+    }
+
+    /* ================= PREVIEW NOTICE MODAL ================= */
+    #previewModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 10, 11, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+    }
+    .modal-box {
+      width: 480px;
+      background: #14181a;
+      border: 1px solid #6b787c;
+      border-top: 4px solid #ffd60a;
+      padding: 26px 28px;
+      text-align: center;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.85);
+    }
+    .modal-box h2 {
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: #ffd60a;
+      margin-bottom: 8px;
+    }
+    .modal-box p {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #c8d2d5;
+      margin-bottom: 18px;
+    }
+    .modal-close-btn {
+      background: #3a4a36;
+      border: 1px solid #8ea382;
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      padding: 9px 22px;
+      cursor: pointer;
+    }
+    .modal-close-btn:hover {
+      background: #4e6349;
+      border-color: #ffd60a;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="warMapCanvas"></canvas>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="nav-tabs">
+      <span class="key-cap">Q / E</span>
+      <button class="theater-tab active" data-filter="all">[MISSION SELECT • ALL 27]</button>
+      <button class="theater-tab" data-filter="west">WESTERN FRONT (9)</button>
+      <button class="theater-tab" data-filter="east">EASTERN FRONT (9)</button>
+      <button class="theater-tab" data-filter="pacific">PACIFIC THEATRE (9)</button>
+    </div>
+    <div class="top-right-meta">
+      <span>CAMPAIGN STATUS: <b>27 / 27 UNLOCKED</b></span>
+      <span>RELIEF CAMERA: <b id="zoomLevelText">3D LOCKED • 1.0x</b></span>
+    </div>
+  </div>
+
+  <!-- LEFT MISSION DOSSIER -->
+  <div class="dossier-panel">
+    <div class="dossier-kicker">
+      <span id="dossierMissionTag">MISSION 01 &bull; EASTERN FRONT</span>
+      <span class="status-pill">UNLOCKED</span>
+    </div>
+    <div id="dossierTitle" class="dossier-title">THE GATES OF LENINGRAD</div>
+
+    <div class="dossier-meta-grid">
+      <div>
+        <span class="meta-label">OPERATIVE</span>
+        <span id="dossierChar" class="meta-val">Private Alexei Volkov</span>
+      </div>
+      <div>
+        <span class="meta-label">DATE</span>
+        <span id="dossierDate" class="meta-val">August 1941</span>
+      </div>
+      <div>
+        <span class="meta-label">LOCATION</span>
+        <span id="dossierSetting" class="meta-val">Luga Line, USSR</span>
+      </div>
+      <div>
+        <span class="meta-label">EST. RUNTIME</span>
+        <span id="dossierLength" class="meta-val">25–30 mins</span>
+      </div>
+    </div>
+
+    <div id="dossierSummary" class="dossier-summary"></div>
+
+    <div class="dossier-actions">
+      <button id="deployBtn" class="deploy-btn">SELECT MISSION</button>
+      <button id="backHomeBtn" class="back-btn">BACK TO HOME</button>
+    </div>
+  </div>
+
+  <!-- MAP KEY / LEGEND -->
+  <div class="map-legend">
+    <div class="legend-row">
+      <span class="swatch-box" style="background:rgba(182, 24, 24, 0.72);border:1px solid #ff4b4b;box-shadow:0 0 6px rgba(255,60,60,0.6)"></span>
+      <span>AXIS-CONTROLLED TERRITORY</span>
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#5aa9e6;box-shadow:0 0 6px #5aa9e6"></span>
+      <span>ALLIED / RED ARMY THRUST</span>
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#ff4b4b;box-shadow:0 0 6px #ff4b4b"></span>
+      <span>AXIS MOVEMENT / THRUST</span>
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#fff4d4;box-shadow:0 0 8px #ff5252"></span>
+      <span>3D ELEVATED FRONTLINE</span>
+    </div>
+  </div>
+
+  <!-- BOTTOM MISSION CAROUSEL -->
+  <div class="bottom-dock">
+    <div class="strip-wrapper">
+      <button id="scrollLeftBtn" class="scroll-arrow" title="Previous Mission">&lsaquo;</button>
+      <div id="missionStrip" class="mission-strip"></div>
+      <button id="scrollRightBtn" class="scroll-arrow" title="Next Mission">&rsaquo;</button>
+    </div>
+
+    <div class="footer-prompts">
+      <div class="prompt-group">
+        <span class="prompt-badge"><span class="circle-btn">A</span> Hover / Click to Preview Frontline</span>
+        <span class="prompt-badge"><span class="circle-btn">&harr;</span> Left / Right Arrow Keys</span>
+        <span class="prompt-badge"><span class="circle-btn">&crarr;</span> Select Mission</span>
+      </div>
+      <div class="prompt-group">
+        <span class="prompt-badge"><span class="circle-btn">ESC</span> Back to Headquarters</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNPLAYABLE PREVIEW MODAL -->
+  <div id="previewModal">
+    <div class="modal-box">
+      <h2 id="modalTitle">MISSION BRIEFING LOCKED</h2>
+      <p id="modalBody"></p>
+      <button id="modalCloseBtn" class="modal-close-btn">RETURN TO WAR ROOM</button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 3D TOPOGRAPHY GEOGRAPHY + HISTORICAL 1941-1945 FRONTLINES (ALL 27 MISSIONS)
+    // =========================================================================
+    (function initCampaignData() {
+      const EUROPE_COUNTRIES = [
+        { name: 'ICELAND', alliedBase: true, elev: 14, points: [[180, 185], [235, 165], [305, 175], [322, 215], [275, 245], [202, 238], [172, 212]] },
+        { name: 'IRELAND', alliedBase: true, elev: 11, points: [[342, 815], [392, 785], [418, 745], [385, 718], [336, 742], [324, 788]] },
+        { name: 'UNITED KINGDOM', alliedBase: true, elev: 13, points: [[402, 912], [455, 895], [518, 886], [544, 858], [526, 812], [505, 765], [472, 725], [492, 672], [456, 632], [428, 646], [435, 705], [448, 755], [436, 798], [408, 832], [432, 862], [394, 888]] },
+        { name: 'PORTUGAL', neutral: true, elev: 12, points: [[228, 1235], [268, 1228], [264, 1345], [248, 1418], [218, 1412], [222, 1310]] },
+        { name: 'SPAIN', neutral: true, elev: 15, points: [[268, 1228], [345, 1215], [448, 1245], [505, 1265], [462, 1342], [395, 1425], [312, 1455], [248, 1418], [264, 1345]] },
+        { name: 'FRANCE', elev: 13, points: [[398, 1005], [462, 982], [478, 952], [506, 958], [536, 935], [572, 902], [608, 926], [646, 956], [676, 985], [662, 1038], [642, 1085], [660, 1142], [628, 1192], [572, 1206], [505, 1242], [475, 1215], [462, 1132], [448, 1062], [395, 1032]] },
+        { name: 'BELGIUM', elev: 12, points: [[572, 902], [608, 888], [642, 898], [654, 934], [646, 956], [608, 926]] },
+        { name: 'NETHERLANDS', elev: 9, points: [[602, 845], [642, 828], [674, 836], [670, 884], [642, 898], [608, 888]] },
+        { name: 'GERMANY', elev: 14, points: [[674, 836], [716, 824], [734, 788], [768, 800], [824, 802], [878, 782], [924, 762], [958, 772], [940, 814], [902, 858], [866, 904], [822, 922], [786, 950], [812, 994], [774, 1024], [705, 1024], [676, 985], [654, 934], [670, 884]] },
+        { name: 'DENMARK', elev: 9, points: [[722, 712], [758, 705], [774, 752], [766, 796], [730, 788], [718, 752]] },
+        { name: 'NORWAY', elev: 19, points: [[712, 578], [748, 478], [832, 362], [938, 258], [1032, 212], [1082, 228], [1026, 282], [922, 362], [842, 462], [810, 562], [774, 635], [718, 630]] },
+        { name: 'SWEDEN', neutral: true, elev: 15, points: [[810, 562], [842, 462], [922, 362], [992, 345], [1010, 432], [954, 515], [918, 602], [874, 688], [816, 682], [798, 615]] },
+        { name: 'FINLAND', elev: 12, points: [[992, 345], [1058, 288], [1122, 328], [1152, 432], [1132, 522], [1052, 548], [998, 505], [1010, 432]] },
+        { name: 'SWITZERLAND', neutral: true, elev: 21, points: [[662, 1038], [705, 1024], [742, 1034], [732, 1068], [676, 1072]] },
+        { name: 'AUSTRIA', elev: 19, points: [[742, 1034], [812, 994], [878, 994], [886, 1042], [824, 1062], [756, 1058]] },
+        { name: 'ITALY', elev: 16, points: [[660, 1085], [732, 1068], [812, 1062], [832, 1102], [868, 1158], [928, 1214], [972, 1248], [954, 1276], [910, 1272], [898, 1328], [866, 1340], [848, 1282], [788, 1214], [722, 1146], [664, 1124]] },
+        { name: 'SICILY', elev: 14, points: [[808, 1350], [870, 1346], [855, 1392], [800, 1378]] },
+        { name: 'SARDINIA', elev: 14, points: [[682, 1248], [718, 1244], [722, 1316], [684, 1316]] },
+        { name: 'CORSICA', elev: 15, points: [[688, 1176], [714, 1176], [714, 1222], [688, 1218]] },
+        { name: 'POLAND', elev: 11, points: [[902, 858], [940, 814], [958, 772], [1022, 766], [1096, 788], [1122, 858], [1104, 926], [1030, 944], [948, 934], [866, 904]] },
+        { name: 'CZECHOSLOVAKIA', elev: 15, points: [[786, 950], [822, 922], [866, 904], [948, 934], [1022, 952], [1000, 988], [878, 994], [812, 994]] },
+        { name: 'HUNGARY', elev: 12, points: [[878, 994], [1000, 988], [1040, 1024], [1004, 1068], [904, 1068], [886, 1042]] },
+        { name: 'BALTIC STATES', elev: 10, points: [[958, 772], [992, 712], [1014, 654], [1058, 595], [1122, 595], [1128, 668], [1104, 732], [1096, 788], [1022, 766]] },
+        { name: 'YUGOSLAVIA', elev: 17, points: [[824, 1062], [886, 1042], [904, 1068], [1004, 1068], [1030, 1146], [986, 1222], [944, 1210], [882, 1138]] },
+        { name: 'ROMANIA / BULGARIA', elev: 15, points: [[1004, 1068], [1040, 1024], [1128, 1004], [1176, 1064], [1158, 1158], [1054, 1170], [1030, 1146]] },
+        { name: 'GREECE', elev: 16, points: [[986, 1222], [1030, 1170], [1096, 1176], [1072, 1244], [1040, 1312], [998, 1295]] },
+        { name: 'BELARUS / UKRAINE', elev: 11, points: [[1096, 788], [1128, 718], [1226, 735], [1302, 818], [1358, 922], [1292, 1008], [1176, 1030], [1128, 1004], [1104, 926], [1122, 858]] },
+        { name: 'CRIMEA', elev: 12, points: [[1215, 1030], [1264, 1030], [1252, 1065], [1208, 1058]] },
+        { name: 'U.S.S.R.', sovietBase: true, elev: 12, points: [[1122, 328], [1220, 300], [1780, 300], [1780, 1120], [1396, 1125], [1358, 922], [1302, 818], [1226, 735], [1128, 718], [1122, 595], [1160, 562], [1196, 550], [1188, 494], [1146, 494], [1152, 432]] },
+        { name: 'TURKEY', neutral: true, elev: 16, points: [[1135, 1178], [1240, 1145], [1460, 1145], [1485, 1245], [1245, 1265], [1125, 1235]] },
+        { name: 'NORTH AFRICA', alliedBase: true, elev: 13, points: [[245, 1500], [445, 1478], [645, 1470], [760, 1460], [790, 1520], [778, 1650], [245, 1650]] }
+      ];
+
+      // 3D Topographic Mountain Ranges, Ridges & High-Relief Peaks (Europe)
+      const EUROPE_TOPO_PEAKS = [
+        // Western & Central Alps
+        { x: 682, y: 1054, rx: 46, ry: 26, height: 22, rings: 4 },
+        { x: 748, y: 1042, rx: 52, ry: 24, height: 24, rings: 4 },
+        { x: 815, y: 1025, rx: 48, ry: 22, height: 20, rings: 3 },
+        // Pyrenees
+        { x: 455, y: 1228, rx: 48, ry: 16, height: 18, rings: 3 },
+        // Apennines & Monte Cassino / Broken Stones Ridge (M07)
+        { x: 775, y: 1152, rx: 24, ry: 44, height: 17, rings: 3 },
+        { x: 832, y: 1222, rx: 28, ry: 34, height: 19, rings: 4 },
+        // Mount Etna (Sicily - M06)
+        { x: 846, y: 1364, rx: 16, ry: 14, height: 16, rings: 3 },
+        // Ardennes & Hürtgen Forest Highlands (M13, M14, M15)
+        { x: 648, y: 944, rx: 24, ry: 20, height: 14, rings: 3 },
+        { x: 668, y: 928, rx: 20, ry: 18, height: 14, rings: 3 },
+        // Seelow Heights Terraced Ridge (M17)
+        { x: 902, y: 848, rx: 14, ry: 32, height: 13, rings: 3 },
+        // Carpathian Mountains
+        { x: 1045, y: 978, rx: 44, ry: 24, height: 18, rings: 3 },
+        { x: 1105, y: 1038, rx: 36, ry: 30, height: 18, rings: 3 },
+        // Dinaric Alps
+        { x: 912, y: 1124, rx: 38, ry: 34, height: 17, rings: 3 },
+        // Scandinavian Mountains
+        { x: 812, y: 475, rx: 32, ry: 78, height: 21, rings: 4 },
+        { x: 925, y: 335, rx: 38, ry: 68, height: 20, rings: 4 },
+        // Scottish Highlands
+        { x: 456, y: 678, rx: 24, ry: 34, height: 15, rings: 3 }
+      ];
+
+      const EUROPE_THEATER = {
+        width: 1900,
+        height: 1700,
+        countries: EUROPE_COUNTRIES,
+        topoPeaks: EUROPE_TOPO_PEAKS,
+        waterBodies: [
+          { name: 'LAKE LADOGA', points: [[1156, 498], [1192, 496], [1198, 542], [1162, 546]] }
+        ],
+        rivers: [
+          [[702, 1032], [704, 974], [678, 920], [642, 882]],
+          [[922, 898], [916, 845], [912, 795]],
+          [[988, 944], [1024, 854], [982, 792]],
+          [[1242, 765], [1258, 868], [1282, 945], [1225, 1015]],
+          [[1372, 685], [1452, 785], [1478, 902], [1538, 1015]]
+        ],
+        labels: [
+          { text: 'UNITED KINGDOM', x: 465, y: 825, size: 13 },
+          { text: 'FRANCE', x: 562, y: 1055, size: 15 },
+          { text: 'BELGIUM', x: 616, y: 916, size: 9 },
+          { text: 'NETHERLANDS', x: 642, y: 858, size: 9 },
+          { text: 'GERMANY', x: 785, y: 882, size: 16 },
+          { text: 'POLAND', x: 1012, y: 865, size: 14 },
+          { text: 'ITALY', x: 798, y: 1175, size: 14 },
+          { text: 'BELARUS', x: 1172, y: 778, size: 12 },
+          { text: 'UKRAINE', x: 1245, y: 915, size: 13 },
+          { text: 'U.S.S.R.', x: 1385, y: 615, size: 18 },
+          { text: 'NORWAY', x: 792, y: 495, size: 13 },
+          { text: 'SWEDEN', x: 895, y: 515, size: 13 },
+          { text: 'FINLAND', x: 1072, y: 455, size: 13 },
+          { text: 'SPAIN', x: 355, y: 1325, size: 14 },
+          { text: 'NORTH SEA', x: 605, y: 745, size: 12, sea: true },
+          { text: 'ENGLISH CHANNEL', x: 495, y: 932, size: 10, sea: true },
+          { text: 'BALTIC SEA', x: 935, y: 695, size: 12, sea: true },
+          { text: 'MEDITERRANEAN SEA', x: 675, y: 1395, size: 13, sea: true },
+          { text: 'BLACK SEA', x: 1285, y: 1105, size: 12, sea: true }
+        ],
+        cities: [
+          { name: 'LONDON', x: 516, y: 874 },
+          { name: 'PARIS', x: 576, y: 985 },
+          { name: 'AACHEN', x: 656, y: 922 },
+          { name: 'BASTOGNE', x: 644, y: 944 },
+          { name: 'BERLIN', x: 856, y: 848 },
+          { name: 'WARSAW', x: 1022, y: 854 },
+          { name: 'MINSK', x: 1152, y: 786 },
+          { name: 'KYIV', x: 1246, y: 882 },
+          { name: 'ROME', x: 808, y: 1212 },
+          { name: 'LENINGRAD', x: 1148, y: 562 },
+          { name: 'MOSCOW', x: 1318, y: 672 },
+          { name: 'STALINGRAD', x: 1478, y: 902 }
+        ]
+      };
+
+      // =========================================================================
+      // PACIFIC THEATRE 3D TOPOGRAPHY & 1945 ARCHIPELAGOS
+      // =========================================================================
+      const PACIFIC_COUNTRIES = [
+        { name: 'U.S.S.R.', sovietBase: true, elev: 13, points: [[30, 30], [920, 30], [920, 120], [835, 195], [785, 295], [755, 240], [725, 165], [635, 185], [575, 275], [525, 365], [465, 345], [340, 230], [30, 230]] },
+        { name: 'SAKHALIN', elev: 12, points: [[615, 215], [634, 212], [638, 305], [618, 305]] },
+        { name: 'KURILE ISLANDS', elev: 13, points: [[685, 308], [748, 255], [756, 265], [694, 318]] },
+        { name: 'MANCHURIA', elev: 13, points: [[340, 230], [465, 345], [525, 365], [492, 418], [418, 435], [358, 395], [315, 325]] },
+        { name: 'KOREA', elev: 15, points: [[462, 405], [502, 402], [534, 472], [512, 495], [478, 465]] },
+        { name: 'CHINA', alliedBase: true, elev: 15, points: [[30, 230], [340, 230], [315, 325], [358, 395], [418, 435], [452, 505], [435, 588], [385, 655], [312, 682], [235, 668], [165, 645], [95, 655], [30, 620]] },
+        { name: 'HAINAN', elev: 12, points: [[312, 692], [336, 690], [338, 710], [314, 712]] },
+        { name: 'INDOCHINA / SIAM', elev: 13, points: [[145, 648], [235, 668], [285, 725], [278, 818], [238, 845], [202, 815], [185, 855], [165, 845], [152, 745]] },
+        { name: 'MALAYA', elev: 12, points: [[185, 855], [212, 855], [248, 922], [228, 934], [192, 888]] },
+        { name: 'SUMATRA', elev: 15, points: [[155, 885], [185, 882], [268, 978], [246, 996], [162, 916]] },
+        { name: 'JAVA', elev: 14, points: [[274, 1004], [386, 1014], [384, 1032], [272, 1022]] },
+        { name: 'BORNEO', elev: 14, points: [[318, 862], [392, 848], [428, 895], [405, 956], [326, 952], [308, 906]] },
+        { name: 'CELEBES', elev: 15, points: [[442, 904], [496, 898], [492, 964], [448, 968], [458, 932]] },
+        { name: 'NEW GUINEA', alliedBase: true, elev: 17, points: [[618, 956], [718, 966], [818, 1012], [858, 1046], [832, 1062], [735, 1034], [648, 995], [608, 974]] },
+        { name: 'AUSTRALIA', alliedBase: true, elev: 13, points: [[375, 1145], [488, 1098], [585, 1085], [642, 1122], [685, 1086], [748, 1168], [768, 1265], [712, 1365], [612, 1368], [525, 1315], [395, 1328], [362, 1245]] },
+        { name: 'TASMANIA', alliedBase: true, elev: 13, points: [[684, 1392], [716, 1390], [712, 1418], [686, 1416]] },
+
+        // --- JAPANESE HOME ISLANDS ---
+        { name: 'HOKKAIDO', elev: 16, points: [[644, 316], [686, 308], [696, 338], [664, 354], [642, 342]] },
+        { name: 'HONSHU', elev: 18, points: [[558, 488], [595, 456], [634, 444], [656, 442], [672, 362], [650, 360], [628, 412], [586, 434], [552, 472]] },
+        { name: 'KYUSHU / SHIKOKU', elev: 16, points: [[528, 486], [564, 486], [566, 514], [534, 524], [524, 504]] },
+
+        // --- RYUKYU ARCHIPELAGO & OKINAWA (MISSIONS 24–27) ---
+        { name: 'NORTHERN RYUKYUS', elev: 14, points: [[514, 542], [528, 536], [532, 548], [518, 554]] },
+        { name: 'OKINAWA / CENTRAL RYUKYU', elev: 16, points: [[488, 598], [494, 586], [498, 576], [506, 570], [512, 576], [505, 588], [498, 596], [492, 603]] },
+        { name: 'OUTER RYUKYU (KERAMA)', elev: 13, points: [[481, 591], [487, 589], [488, 596], [482, 598]] },
+        { name: 'SAKISHIMA ISLANDS', elev: 13, points: [[462, 614], [476, 609], [478, 617], [464, 622]] },
+
+        // --- FORMOSA ---
+        { name: 'FORMOSA', elev: 17, points: [[426, 634], [442, 624], [450, 648], [444, 676], [430, 674], [422, 654]] },
+
+        // --- PHILIPPINE ARCHIPELAGO ---
+        { name: 'LUZON', elev: 16, points: [[418, 708], [446, 706], [454, 738], [446, 768], [462, 788], [452, 798], [432, 780], [418, 762], [414, 732]] },
+        { name: 'MINDORO', alliedBase: true, elev: 14, points: [[414, 774], [428, 774], [432, 796], [416, 794]] },
+        { name: 'VISAYAS / LEYTE', alliedBase: true, elev: 14, points: [[452, 802], [478, 800], [484, 834], [456, 838], [446, 820]] },
+        { name: 'MINDANAO', elev: 16, points: [[454, 848], [492, 844], [502, 876], [484, 902], [452, 894], [444, 872]] },
+        { name: 'PALAWAN', elev: 13, points: [[372, 814], [410, 796], [416, 806], [378, 858], [366, 850]] },
+
+        // --- BONIN & VOLCANO ISLANDS (IWO JIMA — MISSION 23) ---
+        { name: 'BONIN ISLANDS', elev: 15, points: [[646, 526], [656, 524], [658, 538], [646, 540]] },
+        { name: 'IWO JIMA', elev: 17, points: [[636, 584], [642, 572], [650, 570], [652, 578], [644, 586], [637, 588]] },
+
+        // --- MARIANA ISLANDS ---
+        { name: 'SAIPAN & TINIAN', alliedBase: true, elev: 14, points: [[652, 678], [662, 676], [662, 696], [650, 696]] },
+        { name: 'GUAM', alliedBase: true, elev: 14, points: [[640, 718], [652, 716], [652, 734], [638, 734]] },
+
+        // --- CAROLINE ISLANDS & FORTIFIED ATOLL (MISSIONS 20–21) ---
+        { name: 'PALAU / PELELIU', alliedBase: true, elev: 14, points: [[548, 814], [562, 812], [562, 834], [546, 834]] },
+        { name: 'ULITHI / YAP', alliedBase: true, elev: 12, points: [[582, 786], [596, 784], [596, 800], [582, 800]] },
+        { name: 'FORTIFIED ATOLL REEF', isReef: true, elev: 6, points: [[732, 816], [748, 810], [762, 816], [764, 829], [752, 837], [736, 835], [729, 824]] },
+        { name: 'ATOLL AIRFIELD ISLAND', elev: 13, points: [[741, 819], [753, 818], [755, 827], [742, 828]] },
+        { name: 'PONAPE', elev: 14, points: [[814, 822], [828, 820], [830, 834], [814, 834]] },
+
+        // --- MARSHALL, WAKE, MARCUS & GILBERT ISLANDS ---
+        { name: 'WAKE ISLAND', isReef: true, elev: 8, points: [[862, 648], [874, 646], [876, 658], [862, 658]] },
+        { name: 'MARCUS ISLAND', isReef: true, elev: 8, points: [[762, 568], [772, 566], [774, 576], [762, 576]] },
+        { name: 'ENIWETOK', alliedBase: true, isReef: true, elev: 8, points: [[878, 764], [892, 762], [892, 774], [878, 774]] },
+        { name: 'KWAJALEIN', alliedBase: true, isReef: true, elev: 8, points: [[904, 786], [922, 784], [924, 802], [904, 802]] },
+        { name: 'WOTJE / JALUIT', isReef: true, elev: 8, points: [[934, 796], [948, 794], [948, 812], [934, 812]] },
+        { name: 'TARAWA / GILBERTS', alliedBase: true, isReef: true, elev: 8, points: [[974, 892], [988, 890], [990, 918], [974, 918]] },
+
+        // --- BISMARCK ARCHIPELAGO & SOLOMON ISLANDS (MISSION 22) ---
+        { name: 'NEW BRITAIN / RABAUL', elev: 16, points: [[762, 976], [812, 966], [822, 982], [792, 1002], [760, 996]] },
+        { name: 'NEW IRELAND', elev: 14, points: [[804, 944], [828, 964], [822, 974], [798, 954]] },
+        { name: 'BOUGAINVILLE', elev: 16, points: [[834, 988], [852, 986], [862, 1012], [844, 1016]] },
+        { name: 'NEW GEORGIA / ISABEL', alliedBase: true, elev: 15, points: [[868, 1018], [898, 1024], [906, 1038], [872, 1034]] },
+        { name: 'SAVO / TULAGI', alliedBase: true, elev: 13, points: [[900, 1044], [912, 1042], [914, 1050], [900, 1050]] },
+        { name: 'GUADALCANAL', alliedBase: true, elev: 17, points: [[894, 1056], [928, 1054], [934, 1072], [896, 1072]] },
+
+        // --- SOUTH & CENTRAL PACIFIC ---
+        { name: 'NEW HEBRIDES', alliedBase: true, elev: 14, points: [[968, 1112], [984, 1110], [988, 1146], [972, 1146]] },
+        { name: 'NEW CALEDONIA', alliedBase: true, elev: 15, points: [[936, 1168], [964, 1188], [956, 1198], [928, 1178]] },
+        { name: 'FIJI ISLANDS', alliedBase: true, elev: 14, points: [[1042, 1138], [1068, 1134], [1070, 1158], [1042, 1158]] },
+        { name: 'MIDWAY', alliedBase: true, isReef: true, elev: 8, points: [[1062, 542], [1076, 540], [1078, 552], [1062, 552]] },
+        { name: 'HAWAIIAN ISLANDS', alliedBase: true, elev: 18, points: [[1268, 626], [1292, 624], [1322, 646], [1336, 668], [1314, 674], [1268, 640]] }
+      ];
+
+      // 3D Topographic Volcanoes, Island Citadels & Mountain Ridges (Pacific)
+      const PACIFIC_TOPO_PEAKS = [
+        // Mount Suribachi & Northern Volcanic Plateau (Iwo Jima - M23)
+        { x: 639, y: 585, rx: 5.5, ry: 4.5, height: 18, rings: 4 },
+        { x: 646, y: 575, rx: 7.0, ry: 5.5, height: 14, rings: 3 },
+        // Okinawa / Ryukyu Mountain Citadel & Central Ridges (M24–M27)
+        { x: 504, y: 577, rx: 6.5, ry: 5.5, height: 18, rings: 4 },
+        { x: 496, y: 591, rx: 7.0, ry: 6.0, height: 15, rings: 3 },
+        // Coral Atoll Bunker Ridge (M20–M21)
+        { x: 748, y: 822, rx: 7.5, ry: 5.0, height: 12, rings: 3 },
+        // Guadalcanal & Solomon Volcanic Peaks (M22)
+        { x: 912, y: 1064, rx: 14, ry: 8, height: 16, rings: 3 },
+        { x: 846, y: 1002, rx: 11, ry: 9, height: 15, rings: 3 },
+        // Mount Fuji & Japanese Alps
+        { x: 626, y: 444, rx: 16, ry: 14, height: 22, rings: 4 },
+        { x: 654, y: 396, rx: 14, ry: 24, height: 19, rings: 3 },
+        // Formosa Central Mountain Range
+        { x: 437, y: 650, rx: 9, ry: 18, height: 18, rings: 3 },
+        // Luzon Cordillera (Philippines)
+        { x: 433, y: 734, rx: 12, ry: 22, height: 17, rings: 3 },
+        // New Guinea Highlands
+        { x: 724, y: 1004, rx: 54, ry: 18, height: 22, rings: 4 },
+        // Sumatra Barisan Range
+        { x: 204, y: 936, rx: 18, ry: 42, height: 18, rings: 3 },
+        // Chinese Interior Highlands
+        { x: 185, y: 465, rx: 75, ry: 62, height: 21, rings: 4 },
+        // Mauna Kea (Hawaii)
+        { x: 1322, y: 662, rx: 12, ry: 10, height: 19, rings: 3 }
+      ];
+
+      const PACIFIC_THEATER = {
+        width: 1500,
+        height: 1500,
+        countries: PACIFIC_COUNTRIES,
+        topoPeaks: PACIFIC_TOPO_PEAKS,
+        waterBodies: [],
+        rivers: [],
+        labels: [
+          { text: 'U.S.S.R.', x: 460, y: 145, size: 16 },
+          { text: 'MANCHURIA', x: 405, y: 345, size: 13 },
+          { text: 'CHINA', x: 245, y: 475, size: 18 },
+          { text: 'KOREA', x: 495, y: 442, size: 10 },
+          { text: 'JAPAN', x: 615, y: 405, size: 14 },
+          { text: 'FORMOSA', x: 405, y: 654, size: 10 },
+          { text: 'PHILIPPINES', x: 495, y: 765, size: 12 },
+          { text: 'BORNEO', x: 368, y: 905, size: 12 },
+          { text: 'NEW GUINEA', x: 735, y: 1005, size: 12 },
+          { text: 'AUSTRALIA', x: 565, y: 1235, size: 18 },
+          { text: 'EAST CHINA SEA', x: 495, y: 535, size: 10, sea: true },
+          { text: 'SOUTH CHINA SEA', x: 340, y: 765, size: 12, sea: true },
+          { text: 'PHILIPPINE SEA', x: 552, y: 695, size: 13, sea: true },
+          { text: 'CENTRAL PACIFIC AREA', x: 865, y: 585, size: 14, sea: true },
+          { text: 'MARIANA ISLANDS', x: 695, y: 705, size: 10, sea: true },
+          { text: 'CAROLINE ISLANDS', x: 685, y: 865, size: 11, sea: true },
+          { text: 'MARSHALL ISLANDS', x: 925, y: 745, size: 10, sea: true },
+          { text: 'SOLOMON STRAIT', x: 882, y: 1046, size: 9.5, sea: true },
+          { text: 'CORAL SEA', x: 825, y: 1155, size: 13, sea: true }
+        ],
+        cities: [
+          { name: 'TOKYO', x: 646, y: 444 },
+          { name: 'OKINAWA', x: 500, y: 584 },
+          { name: 'MANILA', x: 432, y: 760 },
+          { name: 'LEYTE', x: 472, y: 824 },
+          { name: 'IWO JIMA', x: 643, y: 579 },
+          { name: 'SAIPAN', x: 656, y: 684 },
+          { name: 'GUAM', x: 645, y: 726 },
+          { name: 'PELELIU', x: 554, y: 826 },
+          { name: 'TRUK ATOLL', x: 747, y: 823 },
+          { name: 'KWAJALEIN', x: 914, y: 794 },
+          { name: 'TARAWA', x: 982, y: 904 },
+          { name: 'RABAUL', x: 812, y: 974 },
+          { name: 'GUADALCANAL', x: 912, y: 1064 },
+          { name: 'PEARL HARBOR', x: 1292, y: 644 }
+        ]
+      };
+
+      // =========================================================================
+      // ALL 27 CAMPAIGN MISSIONS IN EXACT CHRONOLOGICAL CAMPAIGN ORDER (M01–M27)
+      // =========================================================================
+      const MISSIONS = [
+        // --- MISSION 1: EASTERN FRONT ---
+        {
+          num: 1,
+          title: 'The Gates of Leningrad',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'August 1941',
+          setting: 'Luga Line, USSR',
+          length: '25–30 mins',
+          summary: 'Hold a crumbling defensive trench line outside Leningrad, falling back through burning villages as Axis armor advances.',
+          mapFocus: { x: 1135, y: 575 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1045, 615], [1122, 588], [1165, 615], [1220, 695], [1278, 825], [1305, 965], [1245, 1085], [1080, 1265], [640, 1345], [240, 1410]],
+            [[985, 335], [1122, 328], [1152, 432], [1142, 515], [1052, 548], [998, 505]]
+          ],
+          frontline: [[1050, 618], [1102, 594], [1132, 582], [1166, 608], [1202, 665]],
+          arrows: [
+            { type: 'axis', points: [[1075, 655], [1108, 616], [1131, 588]] },
+            { type: 'axis', points: [[1135, 662], [1148, 622], [1154, 596]] },
+            { type: 'allied', points: [[1162, 555], [1145, 570], [1134, 580]] }
+          ]
+        },
+        // --- MISSION 2: EASTERN FRONT ---
+        {
+          num: 2,
+          title: 'The Frozen Ring',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'Winter 1942',
+          setting: 'Lake Ladoga, USSR',
+          length: '25–30 mins',
+          summary: 'Escort supply trucks across the frozen "Road of Life" under aerial strafing runs and ambush enemy ski patrols in low-visibility blizzards.',
+          mapFocus: { x: 1165, y: 538 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1065, 598], [1126, 576], [1168, 568], [1202, 602], [1265, 725], [1312, 885], [1265, 1065], [1080, 1265], [640, 1345], [240, 1410]],
+            [[985, 335], [1122, 328], [1152, 432], [1155, 506], [1095, 522], [1035, 518], [998, 480]]
+          ],
+          frontline: [[1115, 578], [1148, 572], [1172, 566], [1198, 596]],
+          arrows: [
+            { type: 'allied', points: [[1222, 526], [1188, 534], [1158, 548]] },
+            { type: 'axis', points: [[1164, 592], [1166, 572], [1168, 554]] },
+            { type: 'axis', points: [[1132, 506], [1146, 520], [1156, 532]] }
+          ]
+        },
+        // --- MISSION 3: EASTERN FRONT ---
+        {
+          num: 3,
+          title: 'Volga Crossing',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'September 1942',
+          setting: 'Stalingrad, USSR',
+          length: '25–30 mins',
+          summary: 'Cross the Volga River under artillery bombardment and secure a foothold along the bombed-out riverbanks with limited ammunition.',
+          mapFocus: { x: 1468, y: 902 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1135, 575], [1255, 645], [1345, 765], [1425, 855], [1474, 892], [1474, 918], [1448, 995], [1395, 1115], [1080, 1265], [640, 1345], [240, 1410]]
+          ],
+          frontline: [[1425, 852], [1468, 892], [1475, 916], [1452, 975]],
+          arrows: [
+            { type: 'allied', points: [[1535, 898], [1502, 900], [1478, 902]] },
+            { type: 'axis', points: [[1415, 888], [1445, 896], [1470, 902]] }
+          ]
+        },
+        // --- MISSION 4: EASTERN FRONT ---
+        {
+          num: 4,
+          title: 'Red October Factory',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'November 1942',
+          setting: 'Stalingrad, USSR',
+          length: '25–30 mins',
+          summary: 'Room-to-room close-quarters combat inside a ruined industrial complex, using vertical catwalks and rubble cover to repel entrenched squads.',
+          mapFocus: { x: 1474, y: 898 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1135, 575], [1255, 645], [1345, 765], [1432, 858], [1476, 890], [1475, 916], [1448, 995], [1395, 1115], [1080, 1265], [640, 1345], [240, 1410]]
+          ],
+          frontline: [[1442, 864], [1474, 890], [1476, 912], [1454, 962]],
+          arrows: [
+            { type: 'axis', points: [[1435, 896], [1456, 896], [1472, 896]] },
+            { type: 'allied', points: [[1518, 888], [1496, 892], [1478, 895]] }
+          ]
+        },
+        // --- MISSION 5: EASTERN FRONT ---
+        {
+          num: 5,
+          title: 'Winter Encirclement',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'January 1943',
+          setting: 'Stalingrad Suburbs, USSR',
+          length: '25–30 mins',
+          summary: 'Spearhead Operation Uranus by assaulting fortified German supply depots and cutting off enemy escape routes in heavy snow.',
+          mapFocus: { x: 1455, y: 902 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1135, 575], [1255, 645], [1325, 785], [1356, 915], [1320, 1045], [1080, 1265], [640, 1345], [240, 1410]],
+            [[1436, 884], [1474, 884], [1476, 918], [1438, 920]]
+          ],
+          frontline: [[1436, 884], [1474, 884], [1476, 918], [1438, 920], [1436, 884]],
+          arrows: [
+            { type: 'allied', points: [[1495, 845], [1448, 868], [1405, 894]] },
+            { type: 'allied', points: [[1492, 958], [1445, 934], [1405, 910]] },
+            { type: 'axis', points: [[1362, 928], [1388, 918], [1414, 908]] }
+          ]
+        },
+        // --- MISSION 6: WESTERN FRONT ---
+        {
+          num: 6,
+          title: 'Operation Husky',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'July 1943',
+          setting: 'Gela Beach, Sicily',
+          length: '25–30 mins',
+          summary: "Miller's combat debut. Amphibious night landing followed by a dawn push inland through olive groves and coastal watchtowers.",
+          mapFocus: { x: 836, y: 1368 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1185, 650], [1265, 885], [1165, 1145], [965, 1280], [870, 1346], [855, 1380], [802, 1372], [808, 1350], [680, 1315], [660, 1125], [395, 1032]]
+          ],
+          frontline: [[802, 1372], [834, 1384], [860, 1378]],
+          arrows: [
+            { type: 'allied', points: [[785, 1445], [810, 1410], [828, 1384]] },
+            { type: 'allied', points: [[845, 1442], [852, 1408], [856, 1380]] },
+            { type: 'axis', points: [[836, 1354], [835, 1366], [834, 1378]] }
+          ]
+        },
+        // --- MISSION 7: WESTERN FRONT ---
+        {
+          num: 7,
+          title: 'Broken Stones',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'February 1944',
+          setting: 'Italian Mountains',
+          length: '25–30 mins',
+          summary: 'Navigate steep, rain-slicked ruins below a fortified hilltop monastery, clearing sniper nests and mortar pits.',
+          mapFocus: { x: 822, y: 1228 },
+          enemyPolygons: [
+            [[240, 720], [960, 700], [1155, 665], [1215, 885], [1135, 1135], [965, 1215], [838, 1236], [798, 1222], [660, 1125], [395, 1032]]
+          ],
+          frontline: [[796, 1222], [826, 1234], [858, 1230]],
+          arrows: [
+            { type: 'allied', points: [[812, 1272], [818, 1252], [824, 1235]] },
+            { type: 'allied', points: [[848, 1268], [852, 1250], [854, 1232]] },
+            { type: 'axis', points: [[824, 1205], [825, 1218], [826, 1230]] }
+          ]
+        },
+        // --- MISSION 8: WESTERN FRONT ---
+        {
+          num: 8,
+          title: 'Into the Breach',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'June 6, 1944',
+          setting: 'Omaha Beach, France',
+          length: '25–30 mins',
+          summary: 'Storm the Normandy beachhead under heavy machine-gun fire, breach seawall obstacles, and clear interconnected concrete bunkers.',
+          mapFocus: { x: 512, y: 958 },
+          enemyPolygons: [
+            [[395, 1032], [462, 982], [478, 956], [516, 958], [546, 940], [602, 845], [960, 700], [1135, 765], [1125, 1025], [815, 1225], [628, 1192], [475, 1215]]
+          ],
+          frontline: [[478, 956], [506, 960], [534, 952]],
+          arrows: [
+            { type: 'allied', points: [[495, 902], [500, 930], [504, 956]] },
+            { type: 'allied', points: [[528, 900], [528, 928], [528, 952]] },
+            { type: 'axis', points: [[516, 985], [512, 972], [508, 962]] }
+          ]
+        },
+        // --- MISSION 9: WESTERN FRONT ---
+        {
+          num: 9,
+          title: 'The Bocage',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'July 1944',
+          setting: 'Normandy Hedgerows, France',
+          length: '25–30 mins',
+          summary: 'Slow, tense squad tactics through dense hedgerow mazes, flanking hidden anti-tank guns and ambush positions.',
+          mapFocus: { x: 506, y: 974 },
+          enemyPolygons: [
+            [[395, 1032], [462, 982], [506, 980], [546, 962], [602, 845], [960, 700], [1135, 765], [1125, 1025], [815, 1225], [628, 1192], [475, 1215]]
+          ],
+          frontline: [[466, 982], [506, 980], [544, 964]],
+          arrows: [
+            { type: 'allied', points: [[496, 954], [500, 966], [504, 978]] },
+            { type: 'allied', points: [[526, 952], [532, 960], [538, 966]] },
+            { type: 'axis', points: [[512, 1006], [509, 994], [507, 983]] }
+          ]
+        },
+        // --- MISSION 10: EASTERN FRONT ---
+        {
+          num: 10,
+          title: 'Operation Bagration',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'Summer 1944',
+          setting: 'Belarus Marshlands',
+          length: '25–30 mins',
+          summary: 'Large-scale combined-arms offensive pushing through fortified swamp crossings and wooden bunkers alongside Soviet armor.',
+          mapFocus: { x: 1152, y: 786 },
+          enemyPolygons: [
+            [[540, 935], [674, 836], [960, 700], [1085, 685], [1135, 765], [1152, 845], [1125, 955], [1065, 1085], [825, 1135], [660, 1140]]
+          ],
+          frontline: [[1092, 695], [1136, 768], [1152, 842], [1128, 932]],
+          arrows: [
+            { type: 'allied', points: [[1215, 758], [1175, 772], [1138, 784]] },
+            { type: 'allied', points: [[1218, 818], [1180, 818], [1146, 818]] },
+            { type: 'axis', points: [[1132, 792], [1102, 798], [1072, 804]] }
+          ]
+        },
+        // --- MISSION 11: WESTERN FRONT ---
+        {
+          num: 11,
+          title: 'Road to Paris',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'August 1944',
+          setting: 'Northern France',
+          length: '25–30 mins',
+          summary: 'Fast-paced urban street fighting alongside French Resistance fighters to liberate a vital rail hub and bridge.',
+          mapFocus: { x: 576, y: 985 },
+          enemyPolygons: [
+            [[574, 985], [585, 922], [602, 845], [960, 700], [1085, 785], [1065, 1045], [815, 1205], [642, 1145], [605, 1042]]
+          ],
+          frontline: [[584, 925], [576, 985], [604, 1042], [635, 1110]],
+          arrows: [
+            { type: 'allied', points: [[512, 985], [544, 985], [573, 985]] },
+            { type: 'allied', points: [[524, 1018], [556, 1010], [586, 1002]] },
+            { type: 'axis', points: [[582, 982], [612, 974], [642, 966]] }
+          ]
+        },
+        // --- MISSION 12: WESTERN FRONT ---
+        {
+          num: 12,
+          title: 'The Gates of Aachen',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'October 1944',
+          setting: 'Aachen, Germany',
+          length: '25–30 mins',
+          summary: 'Breach the Siegfried Line\'s "dragon\'s teeth" tank traps and fight block-by-block through the ruined streets and bombed-out theater district of the first major German city to fall to the Allies.',
+          mapFocus: { x: 656, y: 922 },
+          enemyPolygons: [
+            [[632, 848], [656, 916], [662, 968], [676, 1025], [785, 1145], [1022, 1025], [1022, 785], [924, 762], [734, 788]]
+          ],
+          frontline: [[642, 864], [656, 920], [664, 968], [676, 1022]],
+          arrows: [
+            { type: 'allied', points: [[608, 924], [632, 923], [654, 922]] },
+            { type: 'allied', points: [[614, 946], [636, 940], [658, 935]] },
+            { type: 'axis', points: [[684, 918], [670, 920], [659, 922]] }
+          ]
+        },
+        // --- MISSION 13: WESTERN FRONT ---
+        {
+          num: 13,
+          title: 'Ghosts of Hürtgen',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'November 1944',
+          setting: 'Hürtgen Forest, Germany',
+          length: '25–30 mins',
+          summary: 'Navigate thick, fog-choked pine woods rigged with tripwires and tree-burst artillery while rescuing an isolated platoon.',
+          mapFocus: { x: 662, y: 930 },
+          enemyPolygons: [
+            [[632, 848], [658, 922], [664, 970], [676, 1025], [785, 1145], [1022, 1025], [1022, 785], [924, 762], [734, 788]]
+          ],
+          frontline: [[642, 864], [658, 924], [666, 970], [676, 1022]],
+          arrows: [
+            { type: 'allied', points: [[626, 932], [644, 931], [660, 930]] },
+            { type: 'axis', points: [[686, 928], [674, 929], [663, 930]] }
+          ]
+        },
+        // --- MISSION 14: WESTERN FRONT ---
+        {
+          num: 14,
+          title: 'Crossroads in the Snow',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'December 1944',
+          setting: 'Ardennes Forest, Belgium',
+          length: '25–30 mins',
+          summary: 'Battle of the Bulge. Cut off from supply lines, hold a frozen crossroads against elite paratroopers using scavenged gear and British air drops.',
+          mapFocus: { x: 644, y: 944 },
+          enemyPolygons: [
+            [[632, 848], [658, 922], [622, 940], [626, 960], [664, 970], [676, 1025], [785, 1145], [1022, 1025], [1022, 785], [924, 762], [734, 788]]
+          ],
+          frontline: [[658, 922], [622, 940], [626, 960], [664, 970]],
+          arrows: [
+            { type: 'axis', points: [[664, 936], [644, 939], [625, 942]] },
+            { type: 'axis', points: [[666, 956], [646, 957], [628, 958]] },
+            { type: 'allied', points: [[622, 984], [634, 964], [643, 946]] }
+          ]
+        },
+        // --- MISSION 15: WESTERN FRONT ---
+        {
+          num: 15,
+          title: 'The Relief of Bastogne',
+          theater: 'west',
+          theaterLabel: 'Western Front',
+          character: 'Sergeant Ryan Callahan',
+          date: 'Early January 1945',
+          setting: 'Belgian Ardennes',
+          length: '25–30 mins',
+          summary: "Callahan's European finale. Counterattack through snowstorms to break the encirclement of Bastogne, clearing fortified farmhouses and ridge lines; concludes with Callahan receiving urgent transfer orders to the Pacific Theatre.",
+          mapFocus: { x: 646, y: 946 },
+          enemyPolygons: [
+            [[632, 848], [658, 922], [640, 940], [642, 956], [664, 970], [676, 1025], [785, 1145], [1022, 1025], [1022, 785], [924, 762], [734, 788]]
+          ],
+          frontline: [[658, 922], [640, 940], [642, 956], [664, 970]],
+          arrows: [
+            { type: 'allied', points: [[624, 982], [634, 964], [643, 948]] },
+            { type: 'allied', points: [[622, 916], [634, 928], [644, 938]] },
+            { type: 'axis', points: [[642, 948], [656, 948], [670, 948]] }
+          ]
+        },
+        // --- MISSION 16: EASTERN FRONT ---
+        {
+          num: 16,
+          title: 'Vistula Push',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'January 1945',
+          setting: 'Warsaw, Poland',
+          length: '25–30 mins',
+          summary: 'Cross the frozen Vistula River and clear heavily mined urban blocks and subterranean sewer networks.',
+          mapFocus: { x: 1022, y: 854 },
+          enemyPolygons: [
+            [[656, 922], [674, 836], [924, 762], [998, 785], [1022, 854], [1012, 945], [945, 1035], [756, 1058], [676, 985]]
+          ],
+          frontline: [[994, 788], [1022, 854], [1014, 935]],
+          arrows: [
+            { type: 'allied', points: [[1082, 844], [1050, 850], [1022, 854]] },
+            { type: 'allied', points: [[1078, 886], [1046, 886], [1018, 886]] },
+            { type: 'axis', points: [[1008, 862], [978, 866], [948, 870]] }
+          ]
+        },
+        // --- MISSION 17: EASTERN FRONT ---
+        {
+          num: 17,
+          title: 'Seelow Heights',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'April 1945',
+          setting: 'Eastern Germany',
+          length: '25–30 mins',
+          summary: 'Nighttime searchlight assault up fortified terraced hills guarding the final approach to Berlin.',
+          mapFocus: { x: 892, y: 848 },
+          enemyPolygons: [
+            [[768, 800], [878, 782], [912, 805], [914, 865], [898, 925], [812, 994], [756, 945], [752, 862]]
+          ],
+          frontline: [[908, 795], [914, 848], [906, 908]],
+          arrows: [
+            { type: 'allied', points: [[968, 846], [938, 847], [912, 848]] },
+            { type: 'allied', points: [[964, 878], [936, 876], [910, 874]] },
+            { type: 'axis', points: [[898, 850], [876, 850], [858, 849]] }
+          ]
+        },
+        // --- MISSION 18: EASTERN FRONT ---
+        {
+          num: 18,
+          title: 'Iron & Ash',
+          theater: 'east',
+          theaterLabel: 'Eastern Front',
+          character: 'Private Alexei Volkov',
+          date: 'May 1945',
+          setting: 'Berlin, Germany',
+          length: '25–30 mins',
+          summary: "Volkov's finale. Brutal house-to-house clearing through Berlin's government district to capture the central communications bunker.",
+          mapFocus: { x: 856, y: 848 },
+          enemyPolygons: [
+            [[838, 834], [874, 834], [876, 862], [838, 862]]
+          ],
+          frontline: [[838, 834], [874, 834], [876, 862], [838, 862], [838, 834]],
+          arrows: [
+            { type: 'allied', points: [[908, 848], [890, 848], [875, 848]] },
+            { type: 'allied', points: [[806, 850], [822, 849], [837, 848]] },
+            { type: 'allied', points: [[856, 804], [856, 820], [856, 833]] }
+          ]
+        },
+        // --- MISSION 19: PACIFIC THEATRE ---
+        {
+          num: 19,
+          title: 'Steel Horizon',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'Early 1945',
+          setting: 'Philippine Sea',
+          length: '25–30 mins',
+          summary: 'Defend an Allied carrier task force from wave attacks of dive bombers on deck AA guns, then board a crippled destroyer to repel enemy boarding craft.',
+          mapFocus: { x: 528, y: 712 },
+          focusZoom: 1.55,
+          enemyPolygons: [
+            [[140, 220], [720, 220], [710, 595], [535, 615], [472, 650], [456, 775], [505, 855], [495, 975], [140, 995]]
+          ],
+          frontline: [[422, 745], [472, 685], [532, 668], [605, 652]],
+          arrows: [
+            { type: 'allied', points: [[598, 765], [562, 738], [534, 716]] },
+            { type: 'allied', points: [[488, 785], [506, 750], [522, 722]] },
+            { type: 'axis', points: [[462, 652], [495, 680], [522, 704]] },
+            { type: 'axis', points: [[512, 608], [520, 656], [526, 700]] }
+          ]
+        },
+        // --- MISSION 20: PACIFIC THEATRE ---
+        {
+          num: 20,
+          title: 'Coral Fortress',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'February 1945',
+          setting: 'Fortified Atoll',
+          length: '25–30 mins',
+          summary: 'Wade ashore across shallow reefs under crossfire from camouflaged log pillboxes and coconut-palm sniper nests.',
+          mapFocus: { x: 747, y: 825 },
+          focusZoom: 2.35,
+          enemyPolygons: [
+            [[724, 806], [768, 806], [768, 832], [724, 832]]
+          ],
+          frontline: [[732, 831], [748, 829], [762, 831]],
+          arrows: [
+            { type: 'allied', points: [[736, 854], [739, 842], [741, 833]] },
+            { type: 'allied', points: [[756, 854], [754, 842], [753, 833]] },
+            { type: 'axis', points: [[747, 816], [747, 823], [747, 828]] }
+          ]
+        },
+        // --- MISSION 21: PACIFIC THEATRE ---
+        {
+          num: 21,
+          title: 'Subterranean',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'February 1945',
+          setting: 'Island Airfield Tunnels',
+          length: '25–30 mins',
+          summary: 'Clear multi-level underground cave systems and supply caverns using revolvers, SMGs, and flares in near-total darkness.',
+          mapFocus: { x: 748, y: 821 },
+          focusZoom: 2.55,
+          enemyPolygons: [
+            [[736, 808], [762, 808], [762, 822], [736, 822]]
+          ],
+          frontline: [[738, 822], [749, 821], [760, 822]],
+          arrows: [
+            { type: 'allied', points: [[743, 836], [745, 829], [747, 823]] },
+            { type: 'allied', points: [[754, 835], [753, 829], [752, 823]] },
+            { type: 'axis', points: [[749, 813], [749, 817], [749, 820]] }
+          ]
+        },
+        // --- MISSION 22: PACIFIC THEATRE ---
+        {
+          num: 22,
+          title: 'Ironbottom Night',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'March 1945',
+          setting: 'Solomon Strait',
+          length: '25–30 mins',
+          summary: 'Midnight PT-boat interception raid against an enemy destroyer convoy, culminating in a close-quarters deck assault to capture naval cipher books.',
+          mapFocus: { x: 896, y: 1048 },
+          focusZoom: 2.25,
+          enemyPolygons: [
+            [[755, 940], [866, 980], [866, 1022], [755, 1005]]
+          ],
+          frontline: [[878, 1042], [898, 1048], [916, 1052]],
+          arrows: [
+            { type: 'allied', points: [[904, 1068], [900, 1058], [897, 1050]] },
+            { type: 'allied', points: [[884, 1064], [888, 1056], [892, 1049]] },
+            { type: 'axis', points: [[862, 1018], [878, 1032], [893, 1045]] }
+          ]
+        },
+        // --- MISSION 23: PACIFIC THEATRE ---
+        {
+          num: 23,
+          title: 'Black Sand',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'March 1945',
+          setting: 'Volcanic Island — Iwo Jima-inspired',
+          length: '25–30 mins',
+          summary: 'Amphibious landing on ash beaches overlooked by a fortified volcanic ridge; call in naval bombardments to crack reinforced bunkers.',
+          mapFocus: { x: 644, y: 579 },
+          focusZoom: 2.45,
+          enemyPolygons: [
+            [[632, 566], [656, 566], [656, 586], [632, 586]]
+          ],
+          frontline: [[637, 584], [644, 581], [651, 579]],
+          arrows: [
+            { type: 'allied', points: [[644, 606], [644, 594], [644, 584]] },
+            { type: 'allied', points: [[658, 598], [653, 590], [649, 582]] },
+            { type: 'axis', points: [[642, 573], [643, 577], [644, 580]] }
+          ]
+        },
+        // --- MISSION 24: PACIFIC THEATRE ---
+        {
+          num: 24,
+          title: 'Silent Insertion',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'April 1945',
+          setting: 'Outer Ryukyu Island',
+          length: '25–30 mins',
+          summary: "Midnight rubber-boat insertion ahead of the main fleet. Coastal artillery destroys Miller's squad boats, washing him ashore alone with only a sidearm.",
+          mapFocus: { x: 492, y: 594 },
+          focusZoom: 2.35,
+          enemyPolygons: [
+            [[460, 535], [538, 535], [538, 624], [460, 624]]
+          ],
+          frontline: [[480, 598], [492, 594], [504, 588]],
+          arrows: [
+            { type: 'allied', points: [[482, 616], [486, 606], [490, 596]] },
+            { type: 'axis', points: [[497, 584], [495, 589], [492, 593]] }
+          ]
+        },
+        // --- MISSION 25: PACIFIC THEATRE ---
+        {
+          num: 25,
+          title: 'Ghost in the Canopy',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'April 1945',
+          setting: 'Occupied Jungle Island',
+          length: '25–30 mins',
+          summary: 'Stranded behind enemy lines. Pure stealth, evasion, and hit-and-run ambushes using scavenged Type 97 snipers and Type 26 revolvers to survive enemy search parties.',
+          mapFocus: { x: 497, y: 589 },
+          focusZoom: 2.45,
+          enemyPolygons: [
+            [[460, 535], [538, 535], [538, 624], [460, 624]]
+          ],
+          frontline: [[486, 596], [496, 589], [505, 582]],
+          arrows: [
+            { type: 'allied', points: [[491, 595], [494, 592], [497, 589]] },
+            { type: 'axis', points: [[504, 578], [501, 583], [498, 587]] },
+            { type: 'axis', points: [[490, 582], [493, 585], [496, 588]] }
+          ]
+        },
+        // --- MISSION 26: PACIFIC THEATRE ---
+        {
+          num: 26,
+          title: 'Saboteur',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'May 1945',
+          setting: 'Occupied Jungle Island',
+          length: '25–30 mins',
+          summary: 'Using jungle trails and guerrilla traps, Miller sabotages coastal radar stations, fuel dumps, and heavy shore batteries to cripple island defenses before the invasion.',
+          mapFocus: { x: 501, y: 583 },
+          focusZoom: 2.45,
+          enemyPolygons: [
+            [[492, 535], [538, 535], [538, 610], [492, 610]]
+          ],
+          frontline: [[493, 592], [500, 583], [507, 575]],
+          arrows: [
+            { type: 'allied', points: [[494, 589], [498, 585], [502, 581]] },
+            { type: 'allied', points: [[482, 582], [490, 582], [498, 583]] },
+            { type: 'axis', points: [[507, 574], [504, 578], [502, 581]] }
+          ]
+        },
+        // --- MISSION 27: PACIFIC THEATRE ---
+        {
+          num: 27,
+          title: 'Final Dawn',
+          theater: 'pacific',
+          theaterLabel: 'Pacific Theatre',
+          character: 'Sergeant Ryan Callahan',
+          date: 'May 1945',
+          setting: 'Island Central Citadel',
+          length: '25–30 mins',
+          summary: 'As Allied landing craft storm the beaches at sunrise, Miller emerges from the jungle to reunite with his surviving unit and lead the final assault up the mountain citadel.',
+          mapFocus: { x: 504, y: 577 },
+          focusZoom: 2.55,
+          enemyPolygons: [
+            [[498, 569], [512, 569], [512, 583], [498, 583]]
+          ],
+          frontline: [[498, 569], [512, 569], [512, 583], [498, 583], [498, 569]],
+          arrows: [
+            { type: 'allied', points: [[484, 577], [491, 577], [497, 577]] },
+            { type: 'allied', points: [[518, 592], [513, 586], [509, 582]] },
+            { type: 'allied', points: [[496, 591], [499, 587], [502, 583]] }
+          ]
+        }
+      ];
+
+      window.WW2_CAMPAIGN = {
+        MAP_SCALE: 1.55,
+        THEATERS: {
+          west: EUROPE_THEATER,
+          east: EUROPE_THEATER,
+          pacific: PACIFIC_THEATER
+        },
+        MISSIONS
+      };
+    })();
+
+    // =========================================================================
+    // WAR-ROOM UI & 3D TOPOGRAPHICAL RELIEF RENDERER (LOCKED MISSION CAMERA)
+    // =========================================================================
+    (function () {
+      const DATA = window.WW2_CAMPAIGN;
+      const canvas = document.getElementById('warMapCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const missionStrip = document.getElementById('missionStrip');
+      const dossierMissionTag = document.getElementById('dossierMissionTag');
+      const dossierTitle = document.getElementById('dossierTitle');
+      const dossierChar = document.getElementById('dossierChar');
+      const dossierDate = document.getElementById('dossierDate');
+      const dossierSetting = document.getElementById('dossierSetting');
+      const dossierLength = document.getElementById('dossierLength');
+      const dossierSummary = document.getElementById('dossierSummary');
+      const zoomLevelText = document.getElementById('zoomLevelText');
+
+      const previewModal = document.getElementById('previewModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+
+      let currentFilter = 'all';
+      let visibleMissions = DATA.MISSIONS.slice();
+      let selectedMission = visibleMissions[0];
+      let activeTheaterId = selectedMission.theater;
+
+      // Locked camera state: smoothly interpolates strictly to selected mission
+      let camX = selectedMission.mapFocus.x;
+      let camY = selectedMission.mapFocus.y;
+      let targetCamX = camX;
+      let targetCamY = camY;
+      let camScale = selectedMission.focusZoom || DATA.MAP_SCALE;
+      let targetCamScale = camScale;
+      let theaterFade = 1.0;
+
+      // 3D War-Table Projection Constants
+      const TILT_RAD = 36 * Math.PI / 180; // 36-degree war-room table pitch
+      const COS_TILT = Math.cos(TILT_RAD);
+      const SIN_TILT = Math.sin(TILT_RAD);
+      const FOV = 1480;
+
+      // Normalized directional war-room lamp vector (top-left overhead)
+      const L_RAW = [-0.52, -0.62, 0.85];
+      const L_LEN = Math.hypot(L_RAW[0], L_RAW[1], L_RAW[2]);
+      const LIGHT_DIR = [L_RAW[0] / L_LEN, L_RAW[1] / L_LEN, L_RAW[2] / L_LEN];
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // ================= PROCEDURAL RECON THUMBNAILS =================
+      function renderMissionThumbnail(thumbCanvas, mission) {
+        const w = thumbCanvas.width;
+        const h = thumbCanvas.height;
+        const tctx = thumbCanvas.getContext('2d');
+
+        const palettes = {
+          east: ['#1b1e20', '#485054', '#9aa4a8'],
+          west: ['#1c1d1b', '#4d4f48', '#a3a598'],
+          pacific: ['#181d1e', '#3e4d4f', '#8fa3a6']
+        };
+        const pal = palettes[mission.theater] || palettes.west;
+
+        const bg = tctx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, pal[1]);
+        bg.addColorStop(0.58, pal[2]);
+        bg.addColorStop(0.60, pal[0]);
+        bg.addColorStop(1, '#0d0f10');
+        tctx.fillStyle = bg;
+        tctx.fillRect(0, 0, w, h);
+
+        tctx.fillStyle = 'rgba(20, 22, 24, 0.35)';
+        for (let i = 0; i < 6; i++) {
+          const cx = ((mission.num * 37 + i * 43) % w);
+          const cy = 14 + ((mission.num * 19 + i * 17) % 34);
+          tctx.beginPath();
+          tctx.arc(cx, cy, 18 + (i % 3) * 8, 0, Math.PI * 2);
+          tctx.fill();
+        }
+
+        tctx.fillStyle = '#111314';
+        if (mission.theater === 'pacific') {
+          tctx.beginPath();
+          tctx.moveTo(0, h * 0.65);
+          tctx.lineTo(w * 0.28, h * 0.34);
+          tctx.lineTo(w * 0.52, h * 0.56);
+          tctx.lineTo(w * 0.82, h * 0.48);
+          tctx.lineTo(w, h * 0.62);
+          tctx.lineTo(w, h);
+          tctx.lineTo(0, h);
+          tctx.fill();
+
+          tctx.fillRect(w * 0.14, h * 0.22, 3, h * 0.45);
+          tctx.beginPath();
+          tctx.arc(w * 0.14, h * 0.22, 14, Math.PI, Math.PI * 2);
+          tctx.fill();
+        } else if (mission.theater === 'east') {
+          tctx.fillRect(w * 0.18, h * 0.24, 7, h * 0.42);
+          tctx.fillRect(w * 0.26, h * 0.30, 6, h * 0.36);
+          tctx.fillRect(w * 0.44, h * 0.38, 34, h * 0.28);
+          tctx.fillRect(w * 0.68, h * 0.32, 28, h * 0.34);
+        } else {
+          tctx.beginPath();
+          tctx.moveTo(w * 0.22, h * 0.62);
+          tctx.lineTo(w * 0.25, h * 0.22);
+          tctx.lineTo(w * 0.28, h * 0.62);
+          tctx.moveTo(w * 0.30, h * 0.62);
+          tctx.lineTo(w * 0.33, h * 0.25);
+          tctx.lineTo(w * 0.36, h * 0.62);
+          tctx.fill();
+          tctx.fillRect(w * 0.55, h * 0.46, 46, h * 0.20);
+        }
+
+        tctx.fillStyle = '#0b0c0d';
+        tctx.fillRect(0, h * 0.66, w, h * 0.34);
+      }
+
+      // ================= DOSSIER & STRIP UPDATES =================
+      function updateDossier(mission) {
+        const numStr = String(mission.num).padStart(2, '0');
+        dossierMissionTag.textContent = `MISSION ${numStr} • ${mission.theaterLabel.toUpperCase()}`;
+        dossierTitle.textContent = mission.title.toUpperCase();
+        dossierChar.textContent = mission.character;
+        dossierDate.textContent = mission.date;
+        dossierSetting.textContent = mission.setting;
+        dossierLength.textContent = mission.length;
+        dossierSummary.textContent = mission.summary;
+      }
+
+      function selectMission(mission, centerCard = true) {
+        if (!mission) return;
+        const switchedTheater =
+          (activeTheaterId === 'pacific' && mission.theater !== 'pacific') ||
+          (activeTheaterId !== 'pacific' && mission.theater === 'pacific');
+
+        selectedMission = mission;
+        activeTheaterId = mission.theater;
+        const nextScale = mission.focusZoom || DATA.MAP_SCALE;
+
+        if (switchedTheater) {
+          camX = mission.mapFocus.x;
+          camY = mission.mapFocus.y;
+          camScale = nextScale;
+          theaterFade = 0.25;
+        }
+        targetCamX = mission.mapFocus.x;
+        targetCamY = mission.mapFocus.y;
+        targetCamScale = nextScale;
+
+        const relZoom = (nextScale / DATA.MAP_SCALE).toFixed(1);
+        zoomLevelText.textContent = `3D LOCKED • ${relZoom}x`;
+
+        updateDossier(mission);
+
+        document.querySelectorAll('.mission-card').forEach((card) => {
+          const isSel = Number(card.dataset.num) === mission.num;
+          card.classList.toggle('selected', isSel);
+          if (isSel && centerCard) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        });
+      }
+
+      function buildMissionStrip() {
+        missionStrip.innerHTML = '';
+        visibleMissions = currentFilter === 'all'
+          ? DATA.MISSIONS.slice()
+          : DATA.MISSIONS.filter(m => m.theater === currentFilter);
+
+        visibleMissions.forEach((m) => {
+          const card = document.createElement('div');
+          card.className = 'mission-card' + (selectedMission && selectedMission.num === m.num ? ' selected' : '');
+          card.dataset.num = m.num;
+
+          const frame = document.createElement('div');
+          frame.className = 'thumb-frame';
+
+          const thumb = document.createElement('canvas');
+          thumb.width = 176;
+          thumb.height = 88;
+          renderMissionThumbnail(thumb, m);
+
+          const numBadge = document.createElement('span');
+          numBadge.className = 'thumb-num';
+          numBadge.textContent = 'M' + String(m.num).padStart(2, '0');
+
+          frame.appendChild(thumb);
+          frame.appendChild(numBadge);
+
+          const divider = document.createElement('div');
+          divider.className = 'card-divider';
+
+          const titleEl = document.createElement('div');
+          titleEl.className = 'card-title';
+          titleEl.textContent = m.title.toUpperCase();
+
+          const dateEl = document.createElement('div');
+          dateEl.className = 'card-date';
+          dateEl.textContent = m.date;
+
+          card.appendChild(frame);
+          card.appendChild(divider);
+          card.appendChild(titleEl);
+          card.appendChild(dateEl);
+
+          card.addEventListener('mouseenter', () => selectMission(m, false));
+          card.addEventListener('click', () => {
+            if (selectedMission && selectedMission.num === m.num) {
+              openDeployPreview(m);
+            } else {
+              selectMission(m, true);
+            }
+          });
+
+          missionStrip.appendChild(card);
+        });
+
+        if (!visibleMissions.some(m => m.num === selectedMission.num)) {
+          selectMission(visibleMissions[0], true);
+        }
+      }
+
+      function setFilter(filterKey) {
+        currentFilter = filterKey;
+        document.querySelectorAll('.theater-tab').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.filter === filterKey);
+        });
+        buildMissionStrip();
+      }
+
+      document.querySelectorAll('.theater-tab').forEach((btn) => {
+        btn.addEventListener('click', () => setFilter(btn.dataset.filter));
+      });
+
+      // ================= DEPLOY PREVIEW & NAVIGATION =================
+      function openDeployPreview(mission) {
+        const numStr = String(mission.num).padStart(2, '0');
+        modalTitle.textContent = `MISSION ${numStr}: ${mission.title.toUpperCase()}`;
+        modalBody.textContent =
+          `All 27 campaign missions are unlocked on the 3D tactical war map for frontline reconnaissance. ` +
+          `Playable level deployment for "${mission.title}" (${mission.setting}, ${mission.date}) is currently in development.`;
+        previewModal.style.display = 'flex';
+      }
+
+      document.getElementById('deployBtn').addEventListener('click', () => {
+        if (selectedMission) openDeployPreview(selectedMission);
+      });
+
+      document.getElementById('modalCloseBtn').addEventListener('click', () => {
+        previewModal.style.display = 'none';
+      });
+
+      document.getElementById('backHomeBtn').addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+
+      function stepMission(dir) {
+        const idx = visibleMissions.findIndex(m => m.num === selectedMission.num);
+        const nextIdx = (idx + dir + visibleMissions.length) % visibleMissions.length;
+        selectMission(visibleMissions[nextIdx], true);
+      }
+
+      document.getElementById('scrollLeftBtn').addEventListener('click', () => stepMission(-1));
+      document.getElementById('scrollRightBtn').addEventListener('click', () => stepMission(1));
+
+      missionStrip.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaY) > 0) {
+          e.preventDefault();
+          missionStrip.scrollLeft += e.deltaY * 1.4;
+        }
+      }, { passive: false });
+
+      window.addEventListener('keydown', (e) => {
+        if (previewModal.style.display === 'flex') {
+          if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
+            previewModal.style.display = 'none';
+          }
+          return;
+        }
+
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+          e.preventDefault();
+          stepMission(1);
+        } else if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+          e.preventDefault();
+          stepMission(-1);
+        } else if (e.code === 'KeyQ' || e.code === 'KeyE') {
+          const order = ['all', 'west', 'east', 'pacific'];
+          const cur = order.indexOf(currentFilter);
+          const next = (cur + (e.code === 'KeyE' ? 1 : -1) + order.length) % order.length;
+          setFilter(order[next]);
+        } else if (e.code === 'Enter') {
+          if (selectedMission) openDeployPreview(selectedMission);
+        } else if (e.code === 'Escape') {
+          window.location.href = 'index.html';
+        }
+      });
+
+      // ================= 3D PROJECTION & TOPOGRAPHY HELPERS =================
+      function project3D(wx, wy, wz, viewCenterX, viewCenterY, scale) {
+        const dx = wx - camX;
+        const dy = wy - camY;
+        const yTilt = dy * COS_TILT - wz * SIN_TILT;
+        const zAway = -dy * SIN_TILT - wz * COS_TILT;
+        const safeDepth = Math.max(240, FOV + zAway);
+        const persp = FOV / safeDepth;
+        return {
+          x: viewCenterX + dx * scale * persp,
+          y: viewCenterY + yTilt * scale * persp,
+          zAway,
+          persp
+        };
+      }
+
+      // Compute exact terrain elevation (base country height + nearby topographic peaks)
+      function sampleTerrainHeight(wx, wy, theater) {
+        let baseH = 0;
+        for (let i = 0; i < theater.countries.length; i++) {
+          const c = theater.countries[i];
+          if (pointInPoly(wx, wy, c.points)) {
+            baseH = Math.max(baseH, c.elev || 12);
+          }
+        }
+        let peakAdd = 0;
+        if (theater.topoPeaks) {
+          for (let i = 0; i < theater.topoPeaks.length; i++) {
+            const p = theater.topoPeaks[i];
+            const nx = (wx - p.x) / p.rx;
+            const ny = (wy - p.y) / p.ry;
+            const d2 = nx * nx + ny * ny;
+            if (d2 < 1.0) {
+              peakAdd = Math.max(peakAdd, p.height * (1.0 - d2));
+            }
+          }
+        }
+        return baseH + peakAdd;
+      }
+
+      function pointInPoly(x, y, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const xi = poly[i][0], yi = poly[i][1];
+          const xj = poly[j][0], yj = poly[j][1];
+          const intersect = ((yi > y) !== (yj > y)) &&
+            (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-6) + xi);
+          if (intersect) inside = !inside;
+        }
+        return inside;
+      }
+
+      function signedPolyArea(pts) {
+        let area = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const p1 = pts[i];
+          const p2 = pts[(i + 1) % pts.length];
+          area += (p1[0] * p2[1] - p2[0] * p1[1]);
+        }
+        return area * 0.5;
+      }
+
+      function traceProjectedPolygon(ctx, pts, wz, vcx, vcy, scale, offsetX = 0, offsetY = 0) {
+        if (!pts || pts.length === 0) return;
+        ctx.beginPath();
+        for (let i = 0; i < pts.length; i++) {
+          const p = project3D(pts[i][0] + offsetX, pts[i][1] + offsetY, wz, vcx, vcy, scale);
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+      }
+
+      function buildProjectedPolygonsPath(polygons, wz, vcx, vcy, scale) {
+        const path = new Path2D();
+        polygons.forEach((pts) => {
+          if (!pts || pts.length === 0) return;
+          for (let i = 0; i < pts.length; i++) {
+            const p = project3D(pts[i][0], pts[i][1], wz, vcx, vcy, scale);
+            if (i === 0) path.moveTo(p.x, p.y);
+            else path.lineTo(p.x, p.y);
+          }
+          path.closePath();
+        });
+        return path;
+      }
+
+      function drawProjectedSmoothLine(ctx, screenPts) {
+        if (!screenPts || screenPts.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(screenPts[0].x, screenPts[0].y);
+        for (let i = 1; i < screenPts.length - 1; i++) {
+          const xc = (screenPts[i].x + screenPts[i + 1].x) * 0.5;
+          const yc = (screenPts[i].y + screenPts[i + 1].y) * 0.5;
+          ctx.quadraticCurveTo(screenPts[i].x, screenPts[i].y, xc, yc);
+        }
+        const last = screenPts[screenPts.length - 1];
+        ctx.lineTo(last.x, last.y);
+      }
+
+      // Subdivide a polyline so 3D arcs and elevated frontlines follow curvature smoothly
+      function subdividePolyline(pts, stepsPerSeg = 6) {
+        if (!pts || pts.length < 2) return pts || [];
+        const out = [];
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i];
+          const b = pts[i + 1];
+          for (let s = 0; s < stepsPerSeg; s++) {
+            const t = s / stepsPerSeg;
+            out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+          }
+        }
+        out.push(pts[pts.length - 1]);
+        return out;
+      }
+
+      function draw3DOffensiveArrow(ctx, arrow, theater, timeSec, vcx, vcy, scale) {
+        const rawPts = arrow.points;
+        if (!rawPts || rawPts.length < 2) return;
+
+        const isAxis = arrow.type === 'axis';
+        const mainColor = isAxis ? 'rgba(255, 76, 66, 0.98)' : 'rgba(115, 202, 255, 0.98)';
+        const glowColor = isAxis ? 'rgba(220, 32, 32, 0.55)' : 'rgba(65, 165, 255, 0.50)';
+        const zoomFactor = DATA.MAP_SCALE / scale;
+
+        const subPts = subdividePolyline(rawPts, 7);
+        const totalDist = Math.hypot(
+          rawPts[rawPts.length - 1][0] - rawPts[0][0],
+          rawPts[rawPts.length - 1][1] - rawPts[0][1]
+        );
+        const arcPeak = Math.min(28, Math.max(8, totalDist * 0.16));
+
+        const groundScr = [];
+        const airScr = [];
+        for (let i = 0; i < subPts.length; i++) {
+          const t = i / (subPts.length - 1);
+          const wx = subPts[i][0];
+          const wy = subPts[i][1];
+          const terrZ = sampleTerrainHeight(wx, wy, theater);
+          const arcZ = terrZ + 3.0 + Math.sin(t * Math.PI) * arcPeak;
+          groundScr.push(project3D(wx, wy, terrZ + 0.8, vcx, vcy, scale));
+          airScr.push(project3D(wx, wy, arcZ, vcx, vcy, scale));
+        }
+
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // 1. Ground shadow underneath the 3D ballistic/tactical arc
+        drawProjectedSmoothLine(ctx, groundScr);
+        ctx.strokeStyle = 'rgba(4, 7, 10, 0.58)';
+        ctx.lineWidth = 4.5 * Math.min(1.3, zoomFactor);
+        ctx.stroke();
+
+        // 2. Vertical origin stem at launch point
+        ctx.strokeStyle = isAxis ? 'rgba(255, 110, 110, 0.55)' : 'rgba(135, 210, 255, 0.55)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(groundScr[0].x, groundScr[0].y);
+        ctx.lineTo(airScr[0].x, airScr[0].y);
+        ctx.stroke();
+
+        // 3. Elevated 3D arc glow
+        drawProjectedSmoothLine(ctx, airScr);
+        ctx.strokeStyle = glowColor;
+        ctx.lineWidth = 8.5 * Math.min(1.25, zoomFactor);
+        ctx.stroke();
+
+        // 4. Animated dashed 3D trajectory core
+        drawProjectedSmoothLine(ctx, airScr);
+        ctx.strokeStyle = mainColor;
+        ctx.lineWidth = 2.8 * Math.min(1.25, zoomFactor);
+        ctx.setLineDash([11, 6]);
+        ctx.lineDashOffset = -timeSec * 28;
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 5. Origin anchor dot
+        ctx.fillStyle = isAxis ? '#ffaaaa' : '#ffffff';
+        ctx.beginPath();
+        ctx.arc(airScr[0].x, airScr[0].y, 3.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 6. 3D Arrowhead at tip
+        const pEnd = airScr[airScr.length - 1];
+        const pPrev = airScr[airScr.length - 3] || airScr[airScr.length - 2];
+        const angle = Math.atan2(pEnd.y - pPrev.y, pEnd.x - pPrev.x);
+        const headLen = 13.5;
+
+        ctx.translate(pEnd.x, pEnd.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = mainColor;
+        ctx.beginPath();
+        ctx.moveTo(4, 0);
+        ctx.lineTo(-headLen, -7.2);
+        ctx.lineTo(-headLen * 0.65, 0);
+        ctx.lineTo(-headLen, 7.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw a 3D contoured topographic mountain/volcano/ridge peak
+      function draw3DTopoPeak(ctx, peak, theater, vcx, vcy, scale) {
+        const baseElev = sampleTerrainHeight(peak.x, peak.y, theater) - peak.height;
+        const zBase = Math.max(8, baseElev);
+        const rings = peak.rings || 3;
+        const segs = 18;
+
+        // Subtle shadow on the eastern/southeastern slope
+        const shadowCenter = project3D(peak.x + peak.rx * 0.28, peak.y + peak.ry * 0.24, zBase + 0.4, vcx, vcy, scale);
+        const shadowEdge = project3D(peak.x + peak.rx * 1.15, peak.y + peak.ry * 0.24, zBase + 0.4, vcx, vcy, scale);
+        const sRadX = Math.max(4, Math.abs(shadowEdge.x - shadowCenter.x));
+        const sRadY = sRadX * (peak.ry / peak.rx) * COS_TILT;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(6, 9, 12, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(shadowCenter.x, shadowCenter.y, sRadX, Math.max(2.5, sRadY), 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw stacked 3D elevation terraces & contour lines from base to summit
+        for (let r = 0; r < rings; r++) {
+          const frac0 = r / rings;
+          const frac1 = (r + 1) / rings;
+          const z0 = zBase + peak.height * frac0;
+          const z1 = zBase + peak.height * frac1;
+          const scaleR0 = 1.0 - frac0 * 0.78;
+          const scaleR1 = 1.0 - frac1 * 0.78;
+
+          // Build sloped facet quads around the contour ring for 3D ridge lighting
+          for (let s = 0; s < segs; s++) {
+            const a0 = (s / segs) * Math.PI * 2;
+            const a1 = ((s + 1) / segs) * Math.PI * 2;
+            const aMid = (a0 + a1) * 0.5;
+
+            // Organic ridge irregularity
+            const wobble0 = 1.0 + 0.14 * Math.sin(a0 * 3 + peak.x * 0.05) + 0.08 * Math.cos(a0 * 5);
+            const wobble1 = 1.0 + 0.14 * Math.sin(a1 * 3 + peak.x * 0.05) + 0.08 * Math.cos(a1 * 5);
+
+            const wx00 = peak.x + Math.cos(a0) * peak.rx * scaleR0 * wobble0;
+            const wy00 = peak.y + Math.sin(a0) * peak.ry * scaleR0 * wobble0;
+            const wx10 = peak.x + Math.cos(a1) * peak.rx * scaleR0 * wobble1;
+            const wy10 = peak.y + Math.sin(a1) * peak.ry * scaleR0 * wobble1;
+
+            const wx01 = peak.x + Math.cos(a0) * peak.rx * scaleR1 * wobble0;
+            const wy01 = peak.y + Math.sin(a0) * peak.ry * scaleR1 * wobble0;
+            const wx11 = peak.x + Math.cos(a1) * peak.rx * scaleR1 * wobble1;
+            const wy11 = peak.y + Math.sin(a1) * peak.ry * scaleR1 * wobble1;
+
+            const p00 = project3D(wx00, wy00, z0, vcx, vcy, scale);
+            const p10 = project3D(wx10, wy10, z0, vcx, vcy, scale);
+            const p11 = project3D(wx11, wy11, z1, vcx, vcy, scale);
+            const p01 = project3D(wx01, wy01, z1, vcx, vcy, scale);
+
+            // Directional sunlight dot product on slope normal
+            const nx = Math.cos(aMid) * 0.78;
+            const ny = Math.sin(aMid) * 0.78;
+            const nz = 0.62;
+            const ndotl = Math.max(0, nx * LIGHT_DIR[0] + ny * LIGHT_DIR[1] + nz * LIGHT_DIR[2]);
+            const hypso = frac1 * 24;
+            const lum = Math.round(36 + hypso + ndotl * 38);
+            const blueShift = Math.round(44 + hypso + ndotl * 34);
+
+            ctx.fillStyle = `rgba(${lum}, ${lum + 5}, ${blueShift}, 0.78)`;
+            ctx.beginPath();
+            ctx.moveTo(p00.x, p00.y);
+            ctx.lineTo(p10.x, p10.y);
+            ctx.lineTo(p11.x, p11.y);
+            ctx.lineTo(p01.x, p01.y);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+          // Crisp topographic elevation contour line at z1
+          ctx.strokeStyle = r === rings - 1
+            ? 'rgba(232, 224, 195, 0.46)'
+            : 'rgba(185, 202, 210, 0.24)';
+          ctx.lineWidth = r === rings - 1 ? 1.1 : 0.75;
+          ctx.beginPath();
+          for (let s = 0; s <= segs; s++) {
+            const a = ((s % segs) / segs) * Math.PI * 2;
+            const wobble = 1.0 + 0.14 * Math.sin(a * 3 + peak.x * 0.05) + 0.08 * Math.cos(a * 5);
+            const wx = peak.x + Math.cos(a) * peak.rx * scaleR1 * wobble;
+            const wy = peak.y + Math.sin(a) * peak.ry * scaleR1 * wobble;
+            const sp = project3D(wx, wy, z1, vcx, vcy, scale);
+            if (s === 0) ctx.moveTo(sp.x, sp.y);
+            else ctx.lineTo(sp.x, sp.y);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // ================= MAIN 3D WAR TABLE RENDER LOOP =================
+      function renderWarMap(timeSec) {
+        const w = canvas.width;
+        const h = canvas.height;
+        const theater = DATA.THEATERS[activeTheaterId] || DATA.THEATERS.west;
+        const scale = camScale;
+        const zoomFactor = DATA.MAP_SCALE / scale;
+
+        const vcx = w * 0.58;
+        const vcy = h * 0.45;
+
+        // 1. Deep War-Room Ocean & Bathymetry Backdrop
+        const oceanGrad = ctx.createRadialGradient(vcx, vcy * 0.85, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.85);
+        oceanGrad.addColorStop(0, '#131b22');
+        oceanGrad.addColorStop(0.55, '#0c1116');
+        oceanGrad.addColorStop(1, '#06080b');
+        ctx.fillStyle = oceanGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. Projected 3D War-Table Grid (z = 0 plane)
+        ctx.strokeStyle = 'rgba(145, 185, 205, 0.075)';
+        ctx.lineWidth = 1;
+        const gridStep = 100;
+        for (let gx = 0; gx <= theater.width; gx += gridStep) {
+          const p0 = project3D(gx, 0, 0, vcx, vcy, scale);
+          const p1 = project3D(gx, theater.height, 0, vcx, vcy, scale);
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+        for (let gy = 0; gy <= theater.height; gy += gridStep) {
+          const p0 = project3D(0, gy, 0, vcx, vcy, scale);
+          const p1 = project3D(theater.width, gy, 0, vcx, vcy, scale);
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+
+        // 3. Coastal Bathymetry Shelves & Subsea Continental Drop Shadows (z = 0)
+        theater.countries.forEach((country) => {
+          // Shallow coastal water shelf glow
+          traceProjectedPolygon(ctx, country.points, 0, vcx, vcy, scale);
+          ctx.strokeStyle = country.isReef
+            ? 'rgba(72, 185, 195, 0.24)'
+            : 'rgba(85, 145, 175, 0.14)';
+          ctx.lineWidth = (country.isReef ? 14 : 16) * Math.min(1.2, zoomFactor);
+          ctx.stroke();
+
+          // Cast shadow onto ocean floor along war-room light direction
+          const elev = country.elev || 12;
+          traceProjectedPolygon(ctx, country.points, 0, vcx, vcy, scale, elev * 0.55, elev * 0.45);
+          ctx.fillStyle = 'rgba(2, 4, 7, 0.62)';
+          ctx.fill();
+        });
+
+        // 4. Sort Landmasses Back-to-Front by 3D Camera Depth (zAway descending)
+        const sortedCountries = theater.countries
+          .map((country) => {
+            let sumZ = 0;
+            for (let i = 0; i < country.points.length; i++) {
+              sumZ += project3D(country.points[i][0], country.points[i][1], 0, vcx, vcy, scale).zAway;
+            }
+            return { country, avgZAway: sumZ / country.points.length };
+          })
+          .sort((a, b) => b.avgZAway - a.avgZAway);
+
+        // 5. Render 3D Extruded Landmasses (Cliff Sidewalls + Top Cap + Coastal Rim)
+        const m = selectedMission;
+        const hasEnemyPolys = m && m.enemyPolygons && m.enemyPolygons.length > 0;
+
+        sortedCountries.forEach(({ country }) => {
+          const pts = country.points;
+          const elev = country.elev || 12;
+          const areaSign = signedPolyArea(pts) >= 0 ? 1 : -1;
+
+          // 5A. 3D Extruded Coastal Cliff Sidewalls (z = 0 -> z = elev)
+          for (let i = 0; i < pts.length; i++) {
+            const pA = pts[i];
+            const pB = pts[(i + 1) % pts.length];
+            const ex = pB[0] - pA[0];
+            const ey = pB[1] - pA[1];
+            const elen = Math.hypot(ex, ey) || 1;
+            // Outward 2D normal on the map plane
+            const nx = areaSign > 0 ? ey / elen : -ey / elen;
+            const ny = areaSign > 0 ? -ex / elen : ex / elen;
+
+            // Only draw sidewalls facing toward the viewer (south/east/west)
+            if (ny > -0.22) {
+              const topA = project3D(pA[0], pA[1], elev, vcx, vcy, scale);
+              const topB = project3D(pB[0], pB[1], elev, vcx, vcy, scale);
+              const botB = project3D(pB[0], pB[1], 0, vcx, vcy, scale);
+              const botA = project3D(pA[0], pA[1], 0, vcx, vcy, scale);
+
+              const ndotl = Math.max(0, nx * LIGHT_DIR[0] + ny * LIGHT_DIR[1]);
+              const rCol = Math.round(20 + ndotl * 34);
+              const gCol = Math.round(26 + ndotl * 38);
+              const bCol = Math.round(32 + ndotl * 42);
+
+              ctx.fillStyle = `rgb(${rCol}, ${gCol}, ${bCol})`;
+              ctx.beginPath();
+              ctx.moveTo(topA.x, topA.y);
+              ctx.lineTo(topB.x, topB.y);
+              ctx.lineTo(botB.x, botB.y);
+              ctx.lineTo(botA.x, botA.y);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.strokeStyle = 'rgba(15, 20, 24, 0.55)';
+              ctx.lineWidth = 0.7;
+              ctx.stroke();
+            }
+          }
+
+          // 5B. Elevated Landmass Top Cap (z = elev)
+          traceProjectedPolygon(ctx, pts, elev, vcx, vcy, scale);
+          if (country.isReef) {
+            ctx.fillStyle = '#1e3c42';
+          } else if (country.alliedBase) {
+            ctx.fillStyle = '#243647';
+          } else if (country.sovietBase) {
+            ctx.fillStyle = '#283036';
+          } else if (country.neutral) {
+            ctx.fillStyle = '#2e3336';
+          } else {
+            ctx.fillStyle = '#263038';
+          }
+          ctx.fill();
+
+          // 5C. Axis-Controlled Red Territory Overlay Clipped to Elevated Landmass
+          if (hasEnemyPolys) {
+            ctx.save();
+            ctx.clip();
+            const enemyPath = buildProjectedPolygonsPath(m.enemyPolygons, elev, vcx, vcy, scale);
+            ctx.fillStyle = 'rgba(186, 22, 22, 0.60)';
+            ctx.fill(enemyPath);
+
+            ctx.strokeStyle = 'rgba(255, 62, 62, 0.52)';
+            ctx.lineWidth = 14 * Math.min(1.25, zoomFactor);
+            ctx.stroke(enemyPath);
+            ctx.restore();
+          }
+
+          // 5D. Crisp 3D Top Bevel / Border Edge
+          traceProjectedPolygon(ctx, pts, elev, vcx, vcy, scale);
+          ctx.strokeStyle = country.isReef
+            ? 'rgba(130, 225, 230, 0.55)'
+            : 'rgba(218, 230, 235, 0.42)';
+          ctx.lineWidth = 1.3;
+          ctx.stroke();
+        });
+
+        // 6. Inland Lakes & Rivers on Elevated Terrain
+        if (theater.waterBodies) {
+          theater.waterBodies.forEach((wb) => {
+            traceProjectedPolygon(ctx, wb.points, 12.2, vcx, vcy, scale);
+            ctx.fillStyle = '#0e161d';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(165, 200, 215, 0.42)';
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+          });
+        }
+
+        if (theater.rivers) {
+          theater.rivers.forEach((riv) => {
+            const subR = subdividePolyline(riv, 4).map((pt) => {
+              const hRiv = sampleTerrainHeight(pt[0], pt[1], theater);
+              return project3D(pt[0], pt[1], Math.max(10, hRiv) + 0.3, vcx, vcy, scale);
+            });
+            drawProjectedSmoothLine(ctx, subR);
+            ctx.strokeStyle = 'rgba(105, 175, 218, 0.48)';
+            ctx.lineWidth = 1.9;
+            ctx.stroke();
+          });
+        }
+
+        // 7. 3D Topographic Mountain Ranges, Volcanoes & Ridges (Sorted Back-to-Front)
+        if (theater.topoPeaks) {
+          const sortedPeaks = theater.topoPeaks
+            .map((peak) => ({
+              peak,
+              zAway: project3D(peak.x, peak.y, 12, vcx, vcy, scale).zAway
+            }))
+            .sort((a, b) => b.zAway - a.zAway);
+
+          sortedPeaks.forEach(({ peak }) => {
+            draw3DTopoPeak(ctx, peak, theater, vcx, vcy, scale);
+          });
+        }
+
+        // 8. 3D Elevated Active Frontline Wall & Glowing Tactical Ribbon
+        if (m && m.frontline && m.frontline.length >= 2) {
+          const subFl = subdividePolyline(m.frontline, 6);
+          const flGround = [];
+          const flTop = [];
+          for (let i = 0; i < subFl.length; i++) {
+            const wx = subFl[i][0];
+            const wy = subFl[i][1];
+            const tz = sampleTerrainHeight(wx, wy, theater);
+            flGround.push(project3D(wx, wy, tz + 0.4, vcx, vcy, scale));
+            flTop.push(project3D(wx, wy, tz + 4.2, vcx, vcy, scale));
+          }
+
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          // Translucent 3D barrier curtain between terrain surface and elevated frontline
+          ctx.fillStyle = 'rgba(255, 68, 58, 0.24)';
+          ctx.beginPath();
+          ctx.moveTo(flTop[0].x, flTop[0].y);
+          for (let i = 1; i < flTop.length; i++) ctx.lineTo(flTop[i].x, flTop[i].y);
+          for (let i = flGround.length - 1; i >= 0; i--) ctx.lineTo(flGround[i].x, flGround[i].y);
+          ctx.closePath();
+          ctx.fill();
+
+          // Vertical tactical stanchions along the frontline
+          ctx.strokeStyle = 'rgba(255, 165, 140, 0.36)';
+          ctx.lineWidth = 1.0;
+          for (let i = 0; i < flTop.length; i += 3) {
+            ctx.beginPath();
+            ctx.moveTo(flGround[i].x, flGround[i].y);
+            ctx.lineTo(flTop[i].x, flTop[i].y);
+            ctx.stroke();
+          }
+
+          // Outer red glow along elevated frontline
+          drawProjectedSmoothLine(ctx, flTop);
+          ctx.strokeStyle = 'rgba(255, 42, 42, 0.52)';
+          ctx.lineWidth = 14;
+          ctx.stroke();
+
+          // Inner warm ember glow
+          drawProjectedSmoothLine(ctx, flTop);
+          ctx.strokeStyle = 'rgba(255, 118, 95, 0.82)';
+          ctx.lineWidth = 5.2;
+          ctx.stroke();
+
+          // Crisp incandescent frontline crest
+          drawProjectedSmoothLine(ctx, flTop);
+          ctx.strokeStyle = '#fff9ed';
+          ctx.lineWidth = 2.0;
+          ctx.stroke();
+          ctx.restore();
+
+          // 9. 3D Ballistic / Parabolic Movement Arrows
+          if (m.arrows) {
+            m.arrows.forEach(arr => draw3DOffensiveArrow(ctx, arr, theater, timeSec, vcx, vcy, scale));
+          }
+        }
+
+        // 10. Projected Country & Sea Labels
+        theater.labels.forEach((lbl) => {
+          const wz = lbl.sea ? 0.5 : sampleTerrainHeight(lbl.x, lbl.y, theater) + 1.5;
+          const sp = project3D(lbl.x, lbl.y, wz, vcx, vcy, scale);
+          const fontSize = Math.max(8.5, lbl.size * sp.persp * Math.min(1.15, zoomFactor * 0.95));
+          ctx.font = `bold ${fontSize}px "Courier New", monospace`;
+          ctx.textAlign = 'center';
+          ctx.fillStyle = lbl.sea ? 'rgba(115, 162, 182, 0.36)' : 'rgba(232, 240, 242, 0.44)';
+          ctx.fillText(lbl.text, sp.x, sp.y);
+        });
+
+        // 11. Projected City Markers on Terrain Relief
+        theater.cities.forEach((city) => {
+          const distToFocus = selectedMission
+            ? Math.hypot(city.x - selectedMission.mapFocus.x, city.y - selectedMission.mapFocus.y)
+            : 999;
+
+          const cz = sampleTerrainHeight(city.x, city.y, theater) + 0.8;
+          const sp = project3D(city.x, city.y, cz, vcx, vcy, scale);
+
+          ctx.fillStyle = 'rgba(235, 242, 244, 0.82)';
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, 2.3, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (distToFocus > 16 * zoomFactor) {
+            ctx.font = 'bold 9.5px "Courier New", monospace';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+            ctx.fillText(city.name, sp.x + 7, sp.y + 4);
+            ctx.fillStyle = 'rgba(230, 238, 240, 0.78)';
+            ctx.fillText(city.name, sp.x + 6, sp.y + 3);
+          }
+        });
+
+        // 12. 3D Objective Beacons & Holographic Target Pillars
+        const visibleInTheater = DATA.MISSIONS.filter(item =>
+          activeTheaterId === 'pacific' ? item.theater === 'pacific' : item.theater !== 'pacific'
+        );
+        visibleInTheater.forEach((item) => {
+          const isSelected = selectedMission && item.num === selectedMission.num;
+          const fx = item.mapFocus.x;
+          const fy = item.mapFocus.y;
+          const fz = sampleTerrainHeight(fx, fy, theater) + 0.8;
+          const baseScr = project3D(fx, fy, fz, vcx, vcy, scale);
+
+          if (!isSelected) {
+            ctx.fillStyle = 'rgba(214, 195, 139, 0.52)';
+            ctx.beginPath();
+            ctx.arc(baseScr.x, baseScr.y, 3.2, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            const topScr = project3D(fx, fy, fz + 24, vcx, vcy, scale);
+            const pulse = 12 + Math.sin(timeSec * 4.2) * 3.5;
+
+            // Ground-projected 3D tilted radar ring
+            ctx.strokeStyle = 'rgba(255, 214, 10, 0.82)';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.ellipse(baseScr.x, baseScr.y, pulse, pulse * COS_TILT, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Vertical 3D tactical light beam from terrain to floating beacon
+            const beamGrad = ctx.createLinearGradient(baseScr.x, baseScr.y, topScr.x, topScr.y);
+            beamGrad.addColorStop(0, 'rgba(255, 214, 10, 0.85)');
+            beamGrad.addColorStop(1, 'rgba(255, 214, 10, 0.08)');
+            ctx.strokeStyle = beamGrad;
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.moveTo(baseScr.x, baseScr.y);
+            ctx.lineTo(topScr.x, topScr.y);
+            ctx.stroke();
+
+            // Terrain anchor node
+            ctx.fillStyle = '#ffd60a';
+            ctx.beginPath();
+            ctx.arc(baseScr.x, baseScr.y, 4.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Elevated 3D diamond marker at beacon summit
+            const bobY = topScr.y + Math.sin(timeSec * 3.6) * 2.5;
+            ctx.fillStyle = '#ffd60a';
+            ctx.beginPath();
+            ctx.moveTo(topScr.x, bobY - 6);
+            ctx.lineTo(topScr.x + 5, bobY);
+            ctx.lineTo(topScr.x, bobY + 6);
+            ctx.lineTo(topScr.x - 5, bobY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Crisp mission title callout next to elevated beacon
+            ctx.font = 'bold 14px "Courier New", monospace';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+            ctx.fillText(item.title.toUpperCase(), topScr.x + 15, bobY + 5);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(item.title.toUpperCase(), topScr.x + 14, bobY + 4);
+          }
+        });
+
+        // 13. War-Room Horizon & Vignette Framing
+        const horizonFog = ctx.createLinearGradient(0, 0, 0, h * 0.22);
+        horizonFog.addColorStop(0, 'rgba(6, 9, 12, 0.78)');
+        horizonFog.addColorStop(1, 'rgba(6, 9, 12, 0)');
+        ctx.fillStyle = horizonFog;
+        ctx.fillRect(0, 0, w, h * 0.22);
+
+        const vig = ctx.createRadialGradient(vcx, vcy, h * 0.24, w * 0.5, h * 0.5, w * 0.74);
+        vig.addColorStop(0, 'rgba(8, 10, 12, 0)');
+        vig.addColorStop(1, 'rgba(5, 7, 9, 0.74)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, w, h);
+
+        if (theaterFade < 1.0) {
+          ctx.fillStyle = `rgba(8, 10, 12, ${1.0 - theaterFade})`;
+          ctx.fillRect(0, 0, w, h);
+        }
+      }
+
+      // ================= MAIN ANIMATION LOOP =================
+      buildMissionStrip();
+      selectMission(visibleMissions[0], false);
+
+      let lastTime = performance.now();
+      function animate(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        const panEase = 1 - Math.exp(-dt * 6.5);
+        camX += (targetCamX - camX) * panEase;
+        camY += (targetCamY - camY) * panEase;
+        camScale += (targetCamScale - camScale) * panEase;
+
+        if (theaterFade < 1.0) {
+          theaterFade = Math.min(1.0, theaterFade + dt * 3.2);
+        }
+
+        renderWarMap(now / 1000);
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
