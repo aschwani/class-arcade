@@ -397,6 +397,27 @@ function updatesFor(game){
   return stored.concat(game.seedUpdates || []);
 }
 function avgOf(arr){ if(!arr.length) return 0; var t=0; for(var i=0;i<arr.length;i++) t+=arr[i]; return t/arr.length; }
+/* One rating per device: each browser keeps a stable device id, and its
+   rating for a game is stored under that id — so re-rating replaces the
+   previous vote instead of adding another one, and click-spam can't pile
+   up extra votes. */
+function deviceId(){
+  var id = store.get('ca_device_id', '');
+  if(!id){
+    id = 'dev-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    store.set('ca_device_id', id);
+  }
+  return id;
+}
+function myRatingFor(game){
+  if(liveState.enabled){
+    var map = liveState.ratings[dbIdFor(game)];
+    var mine = map && map[deviceId()];
+    if(mine) return Number(mine.stars) || 0;
+  }
+  var stored = store.get('ca_ratings', {})[game.id] || [];
+  return stored.length ? Number(stored[stored.length - 1]) || 0 : 0;
+}
 
 /* ============ views ============ */
 var currentGameId = null;
@@ -537,7 +558,7 @@ function renderDetail(){
       '<div class="rate-stars" id="rate-stars">' +
         [1,2,3,4,5].map(function(n){ return '<button type="button" data-n="' + n + '" onclick="addRating(' + n + ')" onmouseover="paintStars(' + n + ')" onmouseout="paintStars(0)">★</button>'; }).join('') +
       '</div>' +
-      '<p class="muted" id="rate-msg" style="margin-top:6px;">Tap a star to rate. Average: ' + (r.length ? avgOf(r).toFixed(1) : '—') + ' from ' + r.length + ' rating' + (r.length===1?'':'s') + '.</p></div>' +
+      '<p class="muted" id="rate-msg" style="margin-top:6px;">' + (myRatingFor(g) ? 'You rated this ' + myRatingFor(g) + ' star' + (myRatingFor(g)===1?'':'s') + ' — tap to change it. ' : 'Tap a star to rate. ') + 'Average: ' + (r.length ? avgOf(r).toFixed(1) : '—') + ' from ' + r.length + ' rating' + (r.length===1?'':'s') + '.</p></div>' +
     '<div class="panel"><h3>📰 Updates from the creator</h3><div id="updates-list">' +
       (updates.length ? updates.map(function(u){
         return '<div class="update-item"><span class="uver">v' + esc(u.version) + '</span> <span class="muted">' + fmtDate(u.ts) + '</span><p style="font-size:14px; margin-top:2px;">' + esc(u.text) + '</p></div>';
@@ -568,14 +589,13 @@ function paintStars(n){
 }
 function saveLocalRating(n){
   var all = store.get('ca_ratings', {});
-  if(!all[currentGameId]) all[currentGameId] = [];
-  all[currentGameId].push(n);
+  all[currentGameId] = [n];
   store.set('ca_ratings', all);
 }
 function finishRating(n){
   renderDetail();
   var msg = document.getElementById('rate-msg');
-  if(msg) msg.innerHTML = 'Thanks for rating! You gave it ' + n + ' star' + (n===1?'':'s') + '. ' + msg.textContent;
+  if(msg) msg.innerHTML = 'Thanks for rating! You gave it ' + n + ' star' + (n===1?'':'s') + '. Tap again anytime to change it — only your latest rating counts.';
 }
 function addRating(n){
   var g = findGame(currentGameId);
@@ -584,20 +604,19 @@ function addRating(n){
     var msg0 = document.getElementById('rate-msg');
     if(msg0) msg0.textContent = 'Saving your rating…';
     var dbId = dbIdFor(g);
-    dbRequest('/ratings/' + encodeURIComponent(dbId) + '.json', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+    var dev = deviceId();
+    dbRequest('/ratings/' + encodeURIComponent(dbId) + '/' + dev + '.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({stars:n, ts:Date.now()})
-    }).then(function(res){
-      if(res && res.name){
-        if(!liveState.ratings[dbId]) liveState.ratings[dbId] = {};
-        liveState.ratings[dbId][res.name] = {stars:n, ts:Date.now()};
-      }
+    }).then(function(){
+      if(!liveState.ratings[dbId]) liveState.ratings[dbId] = {};
+      liveState.ratings[dbId][dev] = {stars:n, ts:Date.now()};
       finishRating(n);
     }).catch(function(){
       /* Database unreachable mid-session: keep the rating visible on this
          device for the session so the student's tap is never lost. */
       if(!liveState.ratings[dbId]) liveState.ratings[dbId] = {};
-      liveState.ratings[dbId]['local-' + Date.now()] = {stars:n, ts:Date.now()};
+      liveState.ratings[dbId][dev] = {stars:n, ts:Date.now()};
       finishRating(n);
     });
     return;
