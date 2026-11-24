@@ -569,7 +569,7 @@ function renderDetail(){
         '<div class="field"><label for="u-text">What\'s new?</label><textarea id="u-text" required maxlength="300" placeholder="What did you add or fix?"></textarea></div>' +
         '<button type="submit" class="btn">Post update</button></form></div>' +
     '<div class="panel"><h3 id="comments-title">💬 Comments (' + comments.length + ')</h3>' +
-      '<p class="muted" style="margin-bottom:8px;">Comments may be reviewed by your teacher.</p><div id="comments-list">' +
+      '<p class="muted" style="margin-bottom:8px;">Comments may be reviewed by your teacher. One comment every 5 minutes.</p><div id="comments-list">' +
       commentsListHtml(g) +
       '</div>' +
       '<form onsubmit="return handleComment(event)" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">' +
@@ -635,11 +635,25 @@ function saveLocalComment(name, text, note){
     if(m) m.textContent = note;
   }
 }
+/* One comment per device every 5 minutes — keeps the review queue from
+   being flooded. The timestamp of the last posted comment lives in this
+   browser's storage. */
+function commentWaitLeft(){
+  var last = Number(store.get('ca_last_comment_ts', 0)) || 0;
+  return Math.max(0, 5*60*1000 - (Date.now() - last));
+}
 function handleComment(ev){
   ev.preventDefault();
   var name = document.getElementById('c-name').value.trim();
   var text = document.getElementById('c-text').value.trim();
   if(!name || !text) return false;
+  var waitLeft = commentWaitLeft();
+  if(waitLeft > 0){
+    var m0 = document.getElementById('comment-msg');
+    if(m0) m0.textContent = 'One comment every 5 minutes — you can post again in about ' + Math.ceil(waitLeft/60000) + ' min.';
+    return false;
+  }
+  store.set('ca_last_comment_ts', Date.now());
   var g = findGame(currentGameId);
   if(liveState.enabled && g){
     var dbId = dbIdFor(g);
