@@ -69,8 +69,6 @@
   .player-box:fullscreen iframe.game-frame{flex:1 1 auto; width:100% !important; height:auto !important; border:none !important; border-radius:0 !important;}
   .player-box:fullscreen > p.muted{display:none;}
   .player-box:fullscreen .fs-btn{position:absolute; top:10px; right:10px; z-index:6; opacity:.55; float:none;}
-  .lock-overlay{display:none;}
-  .player-box:fullscreen .lock-overlay.on{display:flex; position:absolute; inset:0; z-index:5; align-items:center; justify-content:center; background:rgba(0,0,0,.5); color:#fff; font-size:22px; font-weight:600; cursor:pointer; text-align:center; padding:20px;}
   .player-box:fullscreen canvas.game{height:calc(100vh - 210px); width:auto; max-width:96vw;}
   .card-cover, .detail-cover{overflow:hidden;}
   .card-cover img.cover-img, .detail-cover img.cover-img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -340,35 +338,11 @@ function coverHtml(g){
   if(g && g.coverImg) return '<img class="cover-img" src="' + g.coverImg + '" alt="">';
   return esc(g ? g.emoji : '🎮');
 }
-var currentFrame = null;
-function lockPointerToGame(){
-  var f = currentFrame; if(!f || !document.fullscreenElement) return;
-  try { f.focus(); } catch(e){}
-  if(document.pointerLockElement === f) return;
-  try {
-    var r = f.requestPointerLock({ unadjustedMovement: true });
-    if(r && r.catch) r.catch(function(){ try { f.requestPointerLock(); } catch(e){} });
-  } catch(e){ try { f.requestPointerLock(); } catch(e2){} }
-}
-function refreshLockOverlay(){
-  var ov = document.querySelector('#player .lock-overlay'); if(!ov) return;
-  var need = Boolean(document.fullscreenElement && currentFrame && document.pointerLockElement !== currentFrame);
-  ov.className = need ? 'lock-overlay on' : 'lock-overlay';
-}
-document.addEventListener('fullscreenchange', function(){
-  if(document.fullscreenElement){ setTimeout(lockPointerToGame, 60); }
-  refreshLockOverlay();
-});
-document.addEventListener('pointerlockchange', refreshLockOverlay);
 function toggleFullscreen(){
   var box = document.querySelector('#player .player-box');
   if(!box) return;
   if(document.fullscreenElement){ if(document.exitFullscreen) document.exitFullscreen(); }
-  else if(box.requestFullscreen){
-    var pr = box.requestFullscreen();
-    if(pr && pr.then) pr.then(function(){ lockPointerToGame(); }).catch(function(){});
-    else setTimeout(lockPointerToGame, 60);
-  }
+  else if(box.requestFullscreen){ box.requestFullscreen(); }
 }
 
 /* ============ ratings / comments / updates data ============ */
@@ -428,8 +402,6 @@ function avgOf(arr){ if(!arr.length) return 0; var t=0; for(var i=0;i<arr.length
 var currentGameId = null;
 var playerCleanup = null;
 function stopPlayer(){
-  if(document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
-  currentFrame = null;
   if(playerCleanup){ try{ playerCleanup(); }catch(e){} playerCleanup = null; }
   var p = document.getElementById('player'); if(p) p.innerHTML = '';
 }
@@ -706,12 +678,6 @@ function startGame(){
     if(g.hosted){ frame.src = g.hosted; }
     else { frame.srcdoc = g.code || '<p>No code was included with this game.</p>'; }
     p.querySelector('.player-box').appendChild(frame);
-    currentFrame = frame;
-    var ov = document.createElement('div');
-    ov.className = 'lock-overlay';
-    ov.textContent = '🖱️ Click to lock your mouse to the game';
-    ov.onclick = function(){ lockPointerToGame(); };
-    p.querySelector('.player-box').appendChild(ov);
   }
   else if(g.gameKey === 'snake') launchSnake(p);
   else if(g.gameKey === 'coin') launchCoin(p);
@@ -726,7 +692,7 @@ function startGame(){
     box.insertBefore(fb, box.firstChild);
     var hint = document.createElement('p');
     hint.className = 'muted'; hint.style.cssText = 'clear:both; margin-top:8px;';
-    hint.textContent = 'Tip: press Esc to leave full screen. Your mouse locks to the game while you play.';
+    hint.textContent = 'Tip: press Esc to leave full screen. Mouse-aim games lock the mouse while you play.';
     box.appendChild(hint);
   }
 }
